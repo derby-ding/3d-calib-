@@ -1,0 +1,434 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.1" halcon_version="12.0">
+<procedure name="main">
+<interface/>
+<body>
+<c>*结构光标定：首先获得相机参数，其次得到结构光在相机下的坐标，最后，使用最小二乘解法求出结构光平面方程。</c>
+<c>*这里相机参数已标定好，只进行结构光标定。</c>
+<l>dev_update_off ()</l>
+<l>dev_close_window ()</l>
+<l>dev_open_window (0, 0, 640, 480, 'black', WindowHandle)</l>
+<l>set_display_font (WindowHandle, 14, 'mono', 'true', 'false')</l>
+<c>**************</c>
+<l>startpath:=''</l>
+<l>read_cam_par(startpath+'final_campar.dat', StartParameters)</l>
+<l>CalTabDescription := startpath+'caltab_120mm.descr'</l>
+<c></c>
+<c>* Note that the thickness of the calibration target used for this example is 0.0 mm.</c>
+<l>CalTabThickness := .000</l>
+<l>create_calib_data ('calibration_object', 1, 1, CalibDataID)</l>
+<l>set_calib_data_cam_param (CalibDataID, 0, 'area_scan_polynomial', StartParameters)</l>
+<l>set_calib_data_calib_object (CalibDataID, 0, CalTabDescription)</l>
+<l as_id="calibration" as_name="Calibration 01" as_grp="[2,2]" as_ord="1">* for Index := 1 to NumCalibImages by 1</l>
+<l as_id="calibration" as_name="Calibration 01" as_grp="[2,3]" as_ord="1">*     read_image (Image, 'Image/' + Index$'.1')</l>
+<l>*     dev_display (Image)</l>
+<l>*     find_calib_object (Image, CalibDataID, 0, 0, Index, [], [])</l>
+<l>*     get_calib_data_observ_points (CalibDataID, 0, 0, Index, Row, Column, _Index, Pose)</l>
+<l>*     get_calib_data_observ_contours (Contours, CalibDataID, 'caltab', 0, 0, Index)</l>
+<l>*     dev_set_color ('green')</l>
+<l>*     dev_display (Contours)</l>
+<l>*     gen_cross_contour_xld (Cross, Row, Column, 6, 0.785398)</l>
+<l>*     dev_set_color ('yellow')</l>
+<l>*     dev_display (Cross)</l>
+<l>* endfor</l>
+<l>dev_set_colored (3)</l>
+<l>MinThreshold := 20</l>
+<c>* Definition of the world coordinate system (WCS):</c>
+<l>Index := 19</l>
+<c>*****************</c>
+<l>read_image(Image,startpath+Index$'02')</l>
+<l>find_calib_object(Image,CalibDataID,0,0,Index,[],[])</l>
+<l>get_calib_data_observ_points(CalibDataID,0, 0, Index, Row, Column, _Index, CalTabPose)</l>
+<l>* get_calib_data (CalibDataID, 'calib_obj_pose', [0,Index], 'pose', CalTabPose)</l>
+<l>set_origin_pose (CalTabPose, 0.0, 0.0, CalTabThickness, CameraPose)</l>
+<l>* read_image (CalTabImage1, 'Image/' + Index$'.1')</l>
+<l>* get_calib_data (CalibDataID, 'camera', 0, 'params', CameraParameters)</l>
+<l>dev_display (Image)</l>
+<l>disp_3d_coord_system (WindowHandle, StartParameters, CameraPose, .01)</l>
+<l>disp_message (WindowHandle, 'World coordinate system', 'window', 12, 12, 'black', 'true')</l>
+<l>disp_continue_message (WindowHandle, 'black', 'true')</l>
+<l>stop ()</l>
+<c></c>
+<c>* Compute the 3D coordinates of the light line points</c>
+<c>* in the plane z=0 of the WCS</c>
+<l>dev_clear_window ()</l>
+<c>**********************</c>
+<l>read_image (ProfileImage1, startpath+'g'+Index$'02')</l>
+<l>compute_3d_coordinates_of_light_line (ProfileImage1, MinThreshold, StartParameters, [], CameraPose, X19, Y19, Z19)</l>
+<l>if (|X19| == 0 or |Y19| == 0 or |Z19| == 0)</l>
+<l>    dev_display (ProfileImage1)</l>
+<l>    disp_message (WindowHandle, 'The profile MUST be oriented horizontally\nfor successfull processing!\nThe program will exit.', 'window', 12, 12, 'black', 'true')</l>
+<l>    return ()</l>
+<l>endif</l>
+<c></c>
+<c>* Definition of a temporary coordinate system (TCS):</c>
+<l>Index := 20</l>
+<l>* get_calib_data (CalibDataID, 'calib_obj_pose', [0,Index], 'pose', CalTabPose)</l>
+<c>************************</c>
+<l>read_image(Image,startpath+Index$'02')</l>
+<l>find_calib_object(Image,CalibDataID,0,0,Index,[],[])</l>
+<l>get_calib_data_observ_points(CalibDataID,0, 0, Index, Row, Column, _Index, CalTabPose)</l>
+<l>set_origin_pose (CalTabPose, 0.0, 0.0, CalTabThickness, TmpCameraPose)</l>
+<l>* read_image (CalTabImage2, 'Image/' + Index$'.1')</l>
+<l>dev_display (Image)</l>
+<l>disp_3d_coord_system (WindowHandle, StartParameters, TmpCameraPose, .01)</l>
+<l>disp_message (WindowHandle, 'Temporary coordinate system', 'window', 12, 12, 'black', 'true')</l>
+<l>disp_continue_message (WindowHandle, 'black', 'true')</l>
+<l>stop ()</l>
+<c></c>
+<c>* Compute the 3D coordinates of the light line points</c>
+<c>* in the plane z=0 of the TCS</c>
+<c>************************</c>
+<l>read_image (ProfileImage2, startpath+'g'+Index$'02')</l>
+<l>compute_3d_coordinates_of_light_line (ProfileImage2, MinThreshold, StartParameters, TmpCameraPose, CameraPose, X20, Y20, Z20)</l>
+<l>if (|X20| == 0 or |Y20| == 0 or |Z20| == 0)</l>
+<l>    disp_message (WindowHandle, 'The profile MUST be oriented horizontally\nfor successfull processing!\nThe program will exit.', 'window', 12, 12, 'black', 'true')</l>
+<l>    return ()</l>
+<l>endif</l>
+<c>* </c>
+<c>******************************plane in camera</c>
+<l>pose_to_hom_mat3d(CameraPose,Calib_to_Camera)</l>
+<l>affine_trans_point_3d(Calib_to_Camera,X19,Y19,Z19,Lx1,Ly1,Lz1)</l>
+<l>affine_trans_point_3d(Calib_to_Camera,X20,Y20,Z20,Lx2,Ly2,Lz2)</l>
+<l>create_matrix(3,|Lx1|+|Lx2|,[[Lx1,Lx2],[Ly1,Ly2],[Lz1,Lz2]],MatrixT1)</l>
+<l>transpose_matrix(MatrixT1,Matrix1)</l>
+<l>write_matrix(Matrix1,'ascii','tuple2')</l>
+<l>fit_3d_plane_xyz([Lx1,Lx2],[Ly1,Ly2],[Lz1,Lz2],Ox,Oy,Oz,Nx,Ny,Nz,MeanResidual1)</l>
+<l>G:=(Nx*Ox+Ny*Oy+Nz*Oz)</l>
+<l>A:=[Nx/Ny,Ny/Ny,Nz/Ny,-G/Ny]</l>
+<c>*****************</c>
+<c>*To obtain stable and</c>
+<c>* accurate results, acquire the light line points at the</c>
+<c>* bottom and at the top of the measurement volume.</c>
+<l>fit_3d_plane_xyz ([X19,X20], [Y19,Y20], [Z19,Z20], Ox, Oy, Oz, Nx, Ny, Nz, MeanResidual)</l>
+<l>if (|Nx| == 0 or |Ny| == 0 or |Nz| == 0)</l>
+<l>    disp_message (WindowHandle, 'Too few 3d points have been provided to fit the light plane,\nor the points are (nearly) collinear!\nThe program will exit.', 'window', 12, 12, 'black', 'true')</l>
+<l>    return ()</l>
+<l>endif</l>
+<l>if (MeanResidual &gt; 5e-4)</l>
+<l>    disp_message (WindowHandle, 'The light plane could not be fitted accurately!\nThe mean residual distance between the 3d-points and the\nfitted plane is too high (' + (MeanResidual * 1000)$'.3' + 'mm). Please check the\nquality and the correctness of those points.\nThe program will exit!', 'window', 12, 21, 'black', 'true')</l>
+<l>    return ()</l>
+<l>endif</l>
+<c>* </c>
+<c>* Compute the light plane pose: this pose must be oriented</c>
+<c>* such that the plane defined by z=0 coincides with the</c>
+<c>* light plane.</c>
+<l>get_light_plane_pose (Ox, Oy, Oz, Nx, Ny, Nz, LightPlanePose)</l>
+<l>if (|LightPlanePose| != 7)</l>
+<l>    disp_message (WindowHandle, 'The pose of the light plane could not be\ndetermined. Please verify that the vector\npassed at input of the procedure\nget_light_plane_pose() is not null.\nThe program will exit!', 'window', -1, -2, 'black', 'true')</l>
+<l>    return ()</l>
+<l>endif</l>
+<l>String := ['LightPlanePose: ','  Tx    = ' + LightPlanePose[0]$'.3' + ' m','  Ty    = ' + LightPlanePose[1]$'.3' + ' m','  Tz    = ' + LightPlanePose[2]$'.3' + ' m','  alpha = ' + LightPlanePose[3]$'.4' + '°','  beta  = ' + LightPlanePose[4]$'.4' + '°','  gamma = ' + LightPlanePose[5]$'.4' + '°','  type  = ' + LightPlanePose[6]]</l>
+<l>disp_message (WindowHandle, String, 'window', 12, 12, 'black', 'true')</l>
+<l>disp_continue_message (WindowHandle, 'black', 'true')</l>
+<c>*********</c>
+<l>create_matrix(3,|X19|+|X20|,[[X19,X20],[Y19,Y20],[Z19,Z20]],MatrixT)</l>
+<l>transpose_matrix(MatrixT,MatrixTransposedID)</l>
+<l>write_matrix(MatrixTransposedID,'ascii','tuple1')</l>
+<l>G:=(Nx*Ox+Ny*Oy+Nz*Oz)</l>
+<c>**********平面方程系数</c>
+<l>A:=[Nx/Ny,Ny/Ny,Nz/Ny,-G/Ny]</l>
+<c></c>
+<l>* tuple_cos(LightPlanePose[3]*3.14/180,cy)</l>
+<l>* tuple_cos(LightPlanePose[4]*3.14/180,cz)</l>
+<l>* tuple_cos(LightPlanePose[5]*3.14/180,cx)</l>
+<c></c>
+<l>* ox:=LightPlanePose[0]</l>
+<l>* oy:=LightPlanePose[1]</l>
+<l>* oz:=LightPlanePose[2]</l>
+<l>* g:=(nx*ox+ny*oy+nz*oz)</l>
+<l>* a:=[nx/ny,1,nz/ny,g/ny]</l>
+<c></c>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="compute_3d_coordinates_of_light_line">
+<interface>
+<io>
+<par name="ProfileImage" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="MinGray" base_type="ctrl" dimension="0"/>
+<par name="CameraParameters" base_type="ctrl" dimension="0"/>
+<par name="LocalCameraPose" base_type="ctrl" dimension="0"/>
+<par name="ReferenceCameraPose" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="X" base_type="ctrl" dimension="0"/>
+<par name="Y" base_type="ctrl" dimension="0"/>
+<par name="Z" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* This procedure computes the 3D-coordinates of the light</c>
+<c>* line points</c>
+<c>* </c>
+<c>* The extraction of the coordinates of light line points in</c>
+<c>* the image coordinate system is performed by using the</c>
+<c>* operator measure_profile_sheet_of_light.</c>
+<c>* The 3D-coordinates are computed by projecting the extracted</c>
+<c>* coordinates to the plane z=0 of the local coordinate system.</c>
+<c>* Then those coordinates are transformed to the reference pose.</c>
+<c>* Note that if no local coordinate system is explicitly</c>
+<c>* provided, the reference coordinate system is used instead.</c>
+<c>* </c>
+<c>* WARNING: if the profile is not oriented roughly horizontal</c>
+<c>*          empty tuples are returned for X, Y and Z.</c>
+<c>* </c>
+<c>* Initialize the output controls</c>
+<l>X := []</l>
+<l>Y := []</l>
+<l>Z := []</l>
+<c>* </c>
+<c>* Check LocalCameraPose in order to determine if a transform</c>
+<c>* has to be applied after the projection from the camera to</c>
+<c>* the z=0 plane</c>
+<l>if (LocalCameraPose == [])</l>
+<l>    DoTransform := 0</l>
+<l>    LocalCameraPose := ReferenceCameraPose</l>
+<l>elseif (LocalCameraPose == ReferenceCameraPose)</l>
+<l>    DoTransform := 0</l>
+<c>    * </c>
+<l>else</l>
+<l>    DoTransform := 1</l>
+<l>endif</l>
+<c>* </c>
+<c>* Compute the pose for the projection of the</c>
+<c>* local coordinate system to the plane z=0</c>
+<l>pose_to_hom_mat3d (LocalCameraPose, HomMat3D_LocalToCam)</l>
+<c>* </c>
+<c>* Compute the homography which transform the 3D-coordinates</c>
+<c>* of points from the local coordinate system to the reference</c>
+<c>* coordinate system</c>
+<l>if (DoTransform)</l>
+<l>    pose_to_hom_mat3d (ReferenceCameraPose, HomMat3D_ReferenceToCam)</l>
+<l>    hom_mat3d_invert (HomMat3D_ReferenceToCam, HomMat3D_CamToReference)</l>
+<l>    hom_mat3d_compose (HomMat3D_CamToReference, HomMat3D_LocalToCam, HomMat3D_LocalToReference)</l>
+<l>endif</l>
+<c>* </c>
+<c>* Determine the profile region and test if the profile is</c>
+<c>* oriented roughly horizontal</c>
+<l>threshold (ProfileImage, Region, MinGray, 999999999)</l>
+<l>orientation_region (Region, Phi)</l>
+<l>if (cos(Phi) &gt; cos(rad(135)) and cos(Phi) &lt; cos(rad(45)))</l>
+<c>    * The detected profile is NOT oriented roughly horizontal,</c>
+<c>    * therefore return empty tuples X, Y and Z.</c>
+<l>    return ()</l>
+<l>endif</l>
+<l>dilation_circle (Region, RegionDilation, 5.5)</l>
+<l>smallest_rectangle1 (RegionDilation, Row1, Column1, Row2, Column2)</l>
+<l>gen_rectangle1 (ProfileRegion, Row1, Column1, Row2, Column2)</l>
+<l>get_domain (ProfileImage, Domain)</l>
+<l>intersection (ProfileRegion, Domain, ProfileRegion)</l>
+<c>* </c>
+<c>* Get the 2D-coordinates of the points on the light line</c>
+<l>create_sheet_of_light_model (ProfileRegion, ['min_gray','num_profiles'], [MinGray,1], SheetOfLightHandle)</l>
+<l>measure_profile_sheet_of_light (ProfileImage, SheetOfLightHandle, [])</l>
+<l>get_sheet_of_light_result (Disparity, SheetOfLightHandle, 'disparity')</l>
+<l>clear_sheet_of_light_model (SheetOfLightHandle)</l>
+<c>* </c>
+<c>* Get the 3D-coordinates of the points on the light line</c>
+<c>* in the coordinate system defined by ReferenceCameraPose</c>
+<l>get_domain (Disparity, DisparityDomain)</l>
+<l>get_region_points (DisparityDomain, Rows, Columns)</l>
+<l>get_grayval (Disparity, Rows, Columns, Disparities)</l>
+<c>* </c>
+<c>* Project those points to the z=0 plane of the WCS</c>
+<l>image_points_to_world_plane (CameraParameters, LocalCameraPose, Disparities, Columns + Column1, 1.0, X, Y)</l>
+<l>tuple_gen_const (|Columns|, 0.0, Z)</l>
+<c>* </c>
+<c>* If necessary, transform the 3D-coordinates from the</c>
+<c>* local coordinate system to the reference coordinate</c>
+<c>* system</c>
+<l>if (DoTransform)</l>
+<l>    affine_trans_point_3d (HomMat3D_LocalToReference, X, Y, Z, X, Y, Z)</l>
+<l>endif</l>
+<l>return ()</l>
+</body>
+<docu id="compute_3d_coordinates_of_light_line">
+<parameters>
+<parameter id="CameraParameters"/>
+<parameter id="LocalCameraPose"/>
+<parameter id="MinGray"/>
+<parameter id="ProfileImage"/>
+<parameter id="ReferenceCameraPose"/>
+<parameter id="X"/>
+<parameter id="Y"/>
+<parameter id="Z"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="get_light_plane_pose">
+<interface>
+<ic>
+<par name="OriginX" base_type="ctrl" dimension="0"/>
+<par name="OriginY" base_type="ctrl" dimension="0"/>
+<par name="OriginZ" base_type="ctrl" dimension="0"/>
+<par name="NormalVectorX" base_type="ctrl" dimension="0"/>
+<par name="NormalVectorY" base_type="ctrl" dimension="0"/>
+<par name="NormalVectorZ" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="LightPlanePose" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* This procedure determines a lightplane pose,</c>
+<c>* e.g. a pose whose plane defined by z=0 coincides</c>
+<c>* with the physical light plane.</c>
+<c>* </c>
+<c>* Test that the vector passed at input is not null</c>
+<l>LightPlanePose := []</l>
+<l>Norm := NormalVectorX * NormalVectorX + NormalVectorY * NormalVectorY + NormalVectorZ * NormalVectorZ</l>
+<l>if (abs(Norm) &lt; 1e-8)</l>
+<l>    return ()</l>
+<l>endif</l>
+<c>* In order to compute a light-plane pose, we determine</c>
+<c>* two rotations which align the unit vector of the z-axis</c>
+<c>* to the normal vector of the light plane, when applied</c>
+<c>* successively. For example, we can compute the angles</c>
+<c>* Alpha (rotation around the x-axis) and Beta (subsequent</c>
+<c>* rotation around the y-axis) in this successive order.</c>
+<c>* (The rotation around the z-axis is arbitrarily set</c>
+<c>* to zero).</c>
+<c>* </c>
+<c>* Determine the value of the angle Alpha and rotate the</c>
+<c>* normal vector to the plane y=0. This provides the</c>
+<c>* vector N1.</c>
+<l>hom_mat3d_identity (HomMat3DIdentity)</l>
+<l>tuple_atan2 (NormalVectorY, NormalVectorZ, Alpha)</l>
+<l>hom_mat3d_rotate (HomMat3DIdentity, Alpha, 'x', 0, 0, 0, HomMat3DRotateAlpha)</l>
+<l>affine_trans_point_3d (HomMat3DRotateAlpha, NormalVectorX, NormalVectorY, NormalVectorZ, N1x, N1y, N1z)</l>
+<c>* </c>
+<c>* Determine the value of the angle Beta by using the</c>
+<c>* coordinates of N1. Note that the rotation around the</c>
+<c>* y-axis with angle Beta is carried out in the counter</c>
+<c>* trigonometric direction, therefore we apply -Beta.</c>
+<l>tuple_atan2 (N1x, N1z, Beta)</l>
+<l>hom_mat3d_rotate (HomMat3DIdentity, -Beta, 'y', 0, 0, 0, HomMat3DRotateBeta)</l>
+<c>* </c>
+<c>* Create the LightPlanePose</c>
+<l>hom_mat3d_translate (HomMat3DIdentity, -OriginX, -OriginY, -OriginZ, HomMat3DTranslate)</l>
+<l>hom_mat3d_compose (HomMat3DRotateAlpha, HomMat3DTranslate, HomMat3DTmp)</l>
+<l>hom_mat3d_compose (HomMat3DRotateBeta, HomMat3DTmp, HomMat3DWorldToLightplane)</l>
+<l>hom_mat3d_to_pose (HomMat3DWorldToLightplane, LightPlanePose)</l>
+<l>return ()</l>
+<c>* </c>
+</body>
+<docu id="get_light_plane_pose">
+<parameters>
+<parameter id="LightPlanePose"/>
+<parameter id="NormalVectorX"/>
+<parameter id="NormalVectorY"/>
+<parameter id="NormalVectorZ"/>
+<parameter id="OriginX"/>
+<parameter id="OriginY"/>
+<parameter id="OriginZ"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="fit_3d_plane_xyz">
+<interface>
+<ic>
+<par name="X" base_type="ctrl" dimension="0"/>
+<par name="Y" base_type="ctrl" dimension="0"/>
+<par name="Z" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="Ox" base_type="ctrl" dimension="0"/>
+<par name="Oy" base_type="ctrl" dimension="0"/>
+<par name="Oz" base_type="ctrl" dimension="0"/>
+<par name="Nx" base_type="ctrl" dimension="0"/>
+<par name="Ny" base_type="ctrl" dimension="0"/>
+<par name="Nz" base_type="ctrl" dimension="0"/>
+<par name="MeanResidual" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* This procedure fits a 3D-plane into a set of 3D-points</c>
+<c>* </c>
+<c>* The procedure returns the coordinates [Ox, Oy,Oz] of</c>
+<c>* the centroid of the provided input coordinates, and</c>
+<c>* the coordinates [Nx, Ny,Nz] of the normal vector to</c>
+<c>* the fitted plane.</c>
+<c>* </c>
+<c>* WARNING: If the system of equations is under-determined</c>
+<c>* (i.e. if it has too few input coordinates in X, Y, Z),</c>
+<c>* it cannot be solved and the procedure returns empty tuples</c>
+<c>* for X, Y, and Z</c>
+<c>* </c>
+<c>* Perform some initializations</c>
+<l>Ox := []</l>
+<l>Oy := []</l>
+<l>Oz := []</l>
+<l>Nx := []</l>
+<l>Ny := []</l>
+<l>Nz := []</l>
+<l>MeanResidual := []</l>
+<c>* </c>
+<c>* Test the size of X, Y and Z, and return if necessary</c>
+<l>Size := |X|</l>
+<l>if (Size &lt; 3 or Size != |Y| or Size != |Z|)</l>
+<l>    return ()</l>
+<l>endif</l>
+<c>* </c>
+<c>* Compute the coordinates of the centroid point.</c>
+<l>tuple_mean (X, Ox)</l>
+<l>tuple_mean (Y, Oy)</l>
+<l>tuple_mean (Z, Oz)</l>
+<c>* </c>
+<c>* Setup the equation system as a matrix M and compute</c>
+<c>* its singular value decomposition. The singular vector</c>
+<c>* of M corresponding to its smallest singular value provides</c>
+<c>* the coordinates of the normal vector of the fitted plane.</c>
+<l>create_matrix (3, |X|, [X - Ox,Y - Oy,Z - Oz], MatrixID_Mt)</l>
+<l>transpose_matrix (MatrixID_Mt, MatrixID_M)</l>
+<l>svd_matrix (MatrixID_M, 'reduced', 'right', MatrixID_U, MatrixID_S, MatrixID_V)</l>
+<l>get_value_matrix (MatrixID_S, [0,1,2], [0,1,2], SingularvaluesOfM)</l>
+<l>tuple_sort_index (SingularvaluesOfM, Indices)</l>
+<c>* </c>
+<c>* Test if more than one singular value of M is (nearly) equal</c>
+<c>* to zero. This indicates that the provided 3d points are</c>
+<c>* inappropriate to fit the plane (e.g. they are nearly</c>
+<c>* collinear or reduce to a single point).</c>
+<l>if (SingularvaluesOfM[Indices[0]] &lt; 1e-9 and SingularvaluesOfM[Indices[1]] &lt; 1e-9)</l>
+<l>    return ()</l>
+<l>endif</l>
+<c>* </c>
+<c>* Get coordinates of the normal vector to the fitted plane</c>
+<l>get_value_matrix (MatrixID_V, [0,1,2], [Indices[0],Indices[0],Indices[0]], N)</l>
+<l>create_matrix (3, 1, N, MatrixID_N)</l>
+<l>Nx := N[0]</l>
+<l>Ny := N[1]</l>
+<l>Nz := N[2]</l>
+<c>* </c>
+<c>* Compute the mean residual distance between the 3d points</c>
+<c>* and the fitted plane, in order to guess the quality of</c>
+<c>* the fitted plane:</c>
+<l>mult_matrix (MatrixID_M, MatrixID_N, 'AB', MatrixID_MN)</l>
+<l>get_full_matrix (MatrixID_MN, Distances)</l>
+<l>Distances := abs(Distances)</l>
+<l>MeanResidual := sum(Distances) / Size</l>
+<c>* </c>
+<c>* Clear the matrices used in the procedure</c>
+<l>clear_matrix ([MatrixID_MN,MatrixID_N,MatrixID_V,MatrixID_S,MatrixID_U,MatrixID_M,MatrixID_Mt])</l>
+<l>return ()</l>
+</body>
+<docu id="fit_3d_plane_xyz">
+<parameters>
+<parameter id="MeanResidual"/>
+<parameter id="Nx"/>
+<parameter id="Ny"/>
+<parameter id="Nz"/>
+<parameter id="Ox"/>
+<parameter id="Oy"/>
+<parameter id="Oz"/>
+<parameter id="X"/>
+<parameter id="Y"/>
+<parameter id="Z"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>
