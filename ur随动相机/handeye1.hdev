@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.1" halcon_version="12.0">
+<procedure name="main">
+<interface/>
+<body>
+<c>*准备工作</c>
+<l>ImageNameStart := ''</l>
+<l>DataNameStart := ''</l>
+<l>CalTabFile := 'caltab_30.descr'</l>
+<l>list_files(ImageNameStart,'files',filenames)</l>
+<l>tuple_regexp_select(filenames,'.bmp',ImageNames)</l>
+<l>read_image (Image, ImageNames[0])</l>
+<l>get_image_size (Image, Width, Height)</l>
+<c></c>
+<l>read_cam_par (ImageNameStart + 'final_campar.dat', CamParam)</l>
+<c></c>
+<l>caltab_points (CalTabFile, X, Y, Z)</l>
+<c>*9.86403286e-001 -1.92523178e+002 8.19863379e-003 -9.92320571e-003 0.&lt;/</c>
+<l>create_calib_data ('hand_eye_moving_cam', 1, 1, CalibDataID)</l>
+<l>set_calib_data_cam_param (CalibDataID, 0, 'area_scan_polynomial', CamParam)</l>
+<l>set_calib_data_calib_object (CalibDataID, 0, CalTabFile)</l>
+<l>set_calib_data (CalibDataID, 'model', 'general', 'optimization_method', 'nonlinear')</l>
+<c></c>
+<l>filename:=DataNameStart+'pose.txt'</l>
+<l>open_file(filename,'input',FileHandle)</l>
+<l>    IsEOF1:=0</l>
+<l>    data:=[]</l>
+<l>    while(IsEOF1==0)</l>
+<l>        fread_string(FileHandle, OutString, IsEOF1)</l>
+<l>        tuple_is_number(OutString, IsNumber)</l>
+<l>        if(IsNumber==1)</l>
+<l>        tuple_number(OutString,dat)</l>
+<l>        data:=[data,dat]</l>
+<l>        endif</l>
+<l>    endwhile</l>
+<l>close_file(FileHandle) </l>
+<l>Rows := []</l>
+<l>Cols := []</l>
+<l>Poses := []</l>
+<l>XCoords := []</l>
+<l>YCoords := []</l>
+<l>ZCoords := []</l>
+<l>NumMarker := []</l>
+<l>RobotPoses := []</l>
+<l>for I := 1 to |ImageNames| by 1</l>
+<l>*     read_image (Image, ImageNameStart + (2*(I-1)+1)$'01d')</l>
+<l>      read_image (Image, ImageNameStart + I$'01d')</l>
+<l>*     rotate_image(Image1,Image,180,'constant')</l>
+<c>    * Search for the calibration plate, extract the marks and the</c>
+<c>    * pose of it, and store the results in the calibration data model of the</c>
+<c>    * hand-eye calibration</c>
+<l>    find_calib_object (Image, CalibDataID, 0, 0, I, [], [])</l>
+<l>    get_calib_data_observ_contours (Caltab, CalibDataID, 'caltab', 0, 0, I)</l>
+<l>    get_calib_data_observ_points (CalibDataID, 0, 0, I, RCoord, CCoord, Index, CalObjInCamPose)</l>
+<c>    * Visualize the extracted calibration marks and the estimated pose (coordinate system)</c>
+<l>    Rows:=[Rows,RCoord]</l>
+<l>    Cols:=[Cols,CCoord]</l>
+<l>    XCoords := [XCoords, X]</l>
+<l>    YCoords := [YCoords, Y]</l>
+<l>    ZCoords := [ZCoords, Z]</l>
+<l>    NumMarker := [NumMarker, |RCoord|]</l>
+<c>    * Read pose of tool in robot base coordinates (ToolInBasePose)</c>
+<l>    ToolInBasePoseRod:=data[(I-1)*12+6:(I-1)*12+11]</l>
+<l>    ToolInBasePoseRod:=[ToolInBasePoseRod,4]</l>
+<l>    ToolInBasePoseRod[0]:=ToolInBasePoseRod[0]/1000.0</l>
+<l>    ToolInBasePoseRod[1]:=ToolInBasePoseRod[1]/1000.0</l>
+<l>    ToolInBasePoseRod[2]:=ToolInBasePoseRod[2]/1000.0</l>
+<l>    rx:=ToolInBasePoseRod[3]</l>
+<l>    ry:=ToolInBasePoseRod[4]</l>
+<l>    rz:=ToolInBasePoseRod[5] </l>
+<l>    nnorm:=tan(0.5*sqrt(rx*rx+ry*ry+rz*rz))</l>
+<l>    norm:=sqrt(rx*rx+ry*ry+rz*rz)</l>
+<l>    ToolInBasePoseRod[3]:=nnorm*rx/norm</l>
+<l>    ToolInBasePoseRod[4]:=nnorm*ry/norm</l>
+<l>    ToolInBasePoseRod[5]:=nnorm*rz/norm</l>
+<c>    </c>
+<l>    convert_pose_type (ToolInBasePoseRod,'Rp+T', 'abg', 'point', ToolInBasePoseRPY)</l>
+<c>    </c>
+<l>    pose_invert(ToolInBasePoseRPY, BaseInToolPoseRPY)</l>
+<c></c>
+<l>*     set_calib_data (CalibDataID, 'tool', I, 'tool_in_base_pose', ToolInBasePoseRPY)</l>
+<l>*     stop()</l>
+<l>    RobotPoses := [RobotPoses, BaseInToolPoseRPY]</l>
+<l>endfor</l>
+<l> stop()</l>
+<l>* calibrate_hand_eye (CalibDataID, Errors)</l>
+<l>hand_eye_calibration(XCoords,YCoords,ZCoords,Rows,Cols,NumMarker,RobotPoses,CamParam,'nonlinear','error_pose',ToolInCamPose, ObjInBasePose, Error1)</l>
+<c></c>
+<l>* get_calib_data (CalibDataID, 'camera', 0, 'params', CamParam)</l>
+<l>* get_calib_data (CalibDataID, 'camera', 0, 'tool_in_cam_pose', ToolInCamPose)</l>
+<l>* get_calib_data (CalibDataID, 'calib_obj', 0, 'obj_in_base_pose', CalObjInBasePose)</l>
+<c></c>
+<l>clear_calib_data (CalibDataID)</l>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="calc_calplate_pose_movingcam">
+<interface>
+<ic>
+<par name="CalibObjInBasePose" base_type="ctrl" dimension="0"/>
+<par name="ToolInCamPose" base_type="ctrl" dimension="0"/>
+<par name="ToolInBasePose" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="CalibObjInCamPose" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* CalibObjInCamPose = cam_H_calplate</c>
+<c>*                   = cam_H_tool * tool_H_base * base_H_calplate</c>
+<c>*                   = ToolInCamPose * BaseInToolPose * CalibrationPose</c>
+<l>pose_invert (ToolInBasePose, BaseInToolPose)</l>
+<l>pose_compose (ToolInCamPose, BaseInToolPose, BaseInCamPose)</l>
+<l>pose_compose (BaseInCamPose, CalibObjInBasePose, CalibObjInCamPose)</l>
+<l>return ()</l>
+</body>
+<docu id="calc_calplate_pose_movingcam">
+<short lang="en_US">compute cam_H_calplate from hand-eye calibration results</short>
+<parameters>
+<parameter id="CalibObjInBasePose"/>
+<parameter id="CalibObjInCamPose"/>
+<parameter id="ToolInBasePose"/>
+<parameter id="ToolInCamPose"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>
