@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.1" halcon_version="12.0">
+<procedure name="main">
+<interface/>
+<body>
+<l>ImageDirL:='lefttest0.bmp'</l>
+<l>ImageDirR:='righttest0.bmp'</l>
+<c></c>
+<l>read_tuple('disparityconstraint.dat',disparityconstraint)</l>
+<l>disparityconstraintCol:=-disparityconstraint[1]</l>
+<l>disparityconstraintRow:=disparityconstraint[0]</l>
+<l>read_image(MapL,'MapL.tif')</l>
+<l>read_image(MapR,'MapR.tif')</l>
+<l>read_cam_par('RectCamParamLeft.dat',RectCamParL)</l>
+<l>read_cam_par('RectCamParamRight.dat',RectCamParR)</l>
+<l>read_pose('RectReleatPoseL2R.dat',RectLPosRectR)</l>
+<l>read_pose('rectcamrinbase.dat',rectcamrinbasepose)</l>
+<l>pose_invert(RectLPosRectR,RectLinRectR)</l>
+<c></c>
+<l>pose_compose(rectcamrinbasepose,RectLinRectR,RectLinBase)</l>
+<l>pose_to_hom_mat3d(rectcamrinbasepose,Hom_RectR_to_Base)</l>
+<l>pose_to_hom_mat3d(RectLinBase,Hom_RectL_to_Base)</l>
+<l>pose_to_hom_mat3d(RectLPosRectR,Hom_RectR_to_RectL)</l>
+<c>*记录检测和匹配的点，可视化使用</c>
+<l>pointrdx:=[]</l>
+<l>pointrdy:=[]</l>
+<l>pointmcx:=[]</l>
+<l>pointmcy:=[]</l>
+<c>*3d坐标</c>
+<l>Basexs:=[]</l>
+<l>Baseys:=[]</l>
+<l>Basezs:=[]</l>
+<c>*模板</c>
+<l>try</l>
+<l>    read_shape_model_3d ('lcylinder.sm3', LShapeModel3D)</l>
+<l>catch (Exception)</l>
+<l>    read_object_model_3d ('bl.STL', 'mm', [], [], ObjectModel3D, DxfStatus)</l>
+<l>    prepare_object_model_3d (ObjectModel3D, 'shape_based_matching_3d', 'true', [], [])</l>
+<l>    create_shape_model_3d (ObjectModel3D, RectCamParL, rad(90), 0, 0, 'gba', 0, rad(45), 0, 0.5, 0, rad(180), 1.0, 1.4, 7, 'num_levels',4, LShapeModel3D)</l>
+<l>    write_shape_model_3d(LShapeModel3D,'lcylinder.sm3')</l>
+<l>    clear_object_model_3d(ObjectModel3D)</l>
+<l>endtry</l>
+<l>try</l>
+<l>    read_shape_model_3d ('rcylinder.sm3', RShapeModel3D)</l>
+<l>catch (Exception)</l>
+<l>    read_object_model_3d ('bl.STL', 'mm', [], [], ObjectModel3D, DxfStatus)</l>
+<l>    prepare_object_model_3d (ObjectModel3D, 'shape_based_matching_3d', 'true', [], [])</l>
+<l>    create_shape_model_3d (ObjectModel3D, RectCamParR, rad(90), 0, 0, 'gba', 0, rad(45), 0, 0.5, 0, rad(180), 1.0, 1.4, 7, 'num_levels', 4, RShapeModel3D)</l>
+<l>    write_shape_model_3d(RShapeModel3D,'rcylinder.sm3')</l>
+<l>    clear_object_model_3d(ObjectModel3D)</l>
+<l>endtry</l>
+<c></c>
+<c>*读取图像检测物体并匹配</c>
+<l>read_image (ImageL1, ImageDirL)</l>
+<l>rotate_image(ImageL1, ImageL, 180, 'constant')</l>
+<l>emphasize(ImageL,ImageEmphasizeL, 7, 7, 1)</l>
+<l>read_image (ImageR, ImageDirR)</l>
+<l>emphasize(ImageR, ImageEmphasizeR, 7, 7, 1)</l>
+<l>map_image (ImageEmphasizeL, MapL, ImageRectifiedL)</l>
+<l>map_image (ImageEmphasizeR, MapR, ImageRectifiedR)</l>
+<c></c>
+<c>**********************************分割出棒料区域,Row1等值是分割出的ROI顶点。</c>
+<l>stop()</l>
+<l>threshold(ImageRectifiedL,Regionl, 50, 255)</l>
+<l>threshold(ImageRectifiedR,Regionr, 50, 255)</l>
+<c></c>
+<l>dilation_rectangle1(Regionr, RegionDilationr, 7, 7)</l>
+<l>dilation_rectangle1(Regionl, RegionDilationl, 7, 7)</l>
+<c></c>
+<l>connection(RegionDilationr, ConnectedRegionsr)</l>
+<l>connection(RegionDilationl, ConnectedRegionsl)</l>
+<c></c>
+<l>select_shape(ConnectedRegionsl, SelectedRegionsl, ['area','row'], 'and', [50000,0], [399999,700])</l>
+<l>select_shape(ConnectedRegionsr, SelectedRegionsr, ['area','row'], 'and', [50000,0], [399999,700])</l>
+<c></c>
+<l>smallest_rectangle1(SelectedRegionsl,Rowl1, Columnl1, Rowl2, Columnl2)</l>
+<l>smallest_rectangle1(RegionDilationr,Rowr1, Columnr1, Rowr2, Columnr2)</l>
+<l>gen_rectangle1(Rectanglel, Rowl1, Columnl1, Rowl2, Columnl2)</l>
+<l>gen_rectangle1(Rectangler, Rowr1, Columnr1, Rowr2, Columnr2)</l>
+<l>reduce_domain(ImageRectifiedL, Rectanglel, RectifiedLReducedl)</l>
+<l>reduce_domain(ImageRectifiedR, Rectangler, RectifiedLReducedr)         </l>
+<l>dev_clear_window()</l>
+<l>dev_display(RectifiedLReducedl)</l>
+<l>stop()</l>
+<c>***************</c>
+<c>****************************************判断抓取是否成功。</c>
+<l>* read_image(ImageOld,'rimg')</l>
+<l>* sub_image(ImageOld,ImageRectifiedR,Imagesub,1,10)</l>
+<l>* min_max_gray(Rectanglel,Imagesub,0, Min, Max, Range)</l>
+<c>*如果前后两幅图像未改变，则没有进行抓取。</c>
+<l>* if((Range==0))</l>
+<l>*        OldBasex:=Basex</l>
+<l>*        OldBasey:=Basey</l>
+<l>*        OldBasez:=Basez</l>
+<l>* endif</l>
+<c>********************************</c>
+<l>find_shape_model_3d(RectifiedLReducedl,LShapeModel3D,0.93,0.5,0,['num_matches','max_overlap','pose_refinement'], [5,0.2,'least_squares'], Pose, CovPose, Score)</l>
+<c></c>
+<c>*手动测量的棒料大小</c>
+<l>PatternWidth:=100</l>
+<l>PatternHeight:=285</l>
+<c>*匹配棒材，右视图</c>
+<l>get_image_size (ImageRectifiedR, RectWidth, RectHeight)</l>
+<c></c>
+<l>for I:=0 to |Score|-1 by 1       </l>
+<l>        PoseI := Pose[I * 7:I * 7 + 6]       </l>
+<l>        get_shape_model_3d_params (LShapeModel3D, 'reference_point', ReferencePoint)</l>
+<l>        pose_to_hom_mat3d (PoseI, HomMat3D)</l>
+<l>        affine_trans_point_3d (HomMat3D, ReferencePoint[0], ReferencePoint[1], ReferencePoint[2], X, Y, Z)</l>
+<l>        project_3d_point (X, Y, Z, RectCamParL, Row, Column)        </l>
+<l>        pose_invert(PoseI,rectcamlinbl)</l>
+<l>        pose_compose(RectLinRectR,PoseI,blinrectcamr)</l>
+<c>        *在横向区域中搜索,RoiWidth是ROI外接矩形的宽度。</c>
+<l>        RoiWidth:=PatternHeight</l>
+<l>        RoiHeight:=PatternHeight</l>
+<c></c>
+<l>        startcol:=round(max([0,Column+disparityconstraintCol-RoiWidth/2+30]))</l>
+<l>        endcol:=round(min([RectWidth,Column+disparityconstraintCol+RoiWidth/2+90]))</l>
+<l>        startrow:=round(max([0,Row+disparityconstraintRow-RoiHeight/2]))</l>
+<l>        endrow:=round(min([RectHeight,Row+disparityconstraintRow+RoiHeight/2]))</l>
+<l>        gen_rectangle1(Rectangle, startrow, startcol, endrow, endcol)</l>
+<l>        rectangle1_domain(RectifiedLReducedr,ImageReduced, startrow, startcol, endrow, endcol)</l>
+<c>        *参数minscore需要调整</c>
+<c></c>
+<l>        find_shape_model_3d(RectifiedLReducedr,RShapeModel3D,0.93,0.1,0,['num_matches','max_overlap','pose_refinement'], [2,0.2,'least_squares'], Posep, CovPosep, Scorep)</l>
+<c></c>
+<l>        if(|Scorep|&gt;=1)</l>
+<l>         mched:=false </l>
+<l>         for J:=0 to |Scorep|-1 by 1 </l>
+<l>            PoseIr := Posep[J*7:J*7+6]</l>
+<c>           *相对于右相机的3d坐标转换成相对左相机的3d坐标，与左相机下匹配的3d物体坐标进行对比。</c>
+<l>           affine_trans_point_3d(Hom_RectR_to_RectL,PoseIr[0],PoseIr[1],PoseIr[2],temx,temy,temz)</l>
+<l>           pose_compose(RectLinRectR,PoseI,PoseInr)</l>
+<c>          </c>
+<l>           get_shape_model_3d_params (RShapeModel3D, 'reference_point', ReferencePoint)     </l>
+<c>       * Project the reference point</c>
+<l>           pose_to_hom_mat3d (PoseIr, HomMat3D)</l>
+<l>           affine_trans_point_3d (HomMat3D, ReferencePoint[0], ReferencePoint[1], ReferencePoint[2], X, Y, Z)</l>
+<l>           project_3d_point (X, Y, Z, RectCamParR, Rowp, Columnp)</l>
+<c>       *约束条件</c>
+<l>           TRow:=abs(Rowp-Row)</l>
+<l>           TCol:=abs(Columnp-Column)</l>
+<l>           TPos:=abs(temx-PoseI[0])+abs(temy-PoseI[1])</l>
+<l>*         Rotj:=abs(PoseInr[3]-PoseIr[3])+abs(PoseInr[4]-PoseIr[4])</l>
+<l>           TRot:=abs(PoseInr[4]-PoseIr[4])</l>
+<l>stop()</l>
+<c>          *正确匹配后，记录匹配点和3d位置。</c>
+<l>           if((mched==false) and (TCol&lt;disparityconstraintCol*3.5) and (TRow&lt;3) and (TPos&lt;0.01) and (TRot&lt;10))</l>
+<l>            MatchedcolL:=Column</l>
+<l>            MatchedcolR:=Columnp</l>
+<l>            MatchedrowL:=Row</l>
+<l>            MatchedrowR:=Rowp</l>
+<l>            disparity_to_point_3d (RectCamParL, RectCamParR, RectLPosRectR,  MatchedrowL, MatchedcolL,MatchedcolR-MatchedcolL, X_CCS, Y_CCS, Z_CCS)</l>
+<l>            affine_trans_point_3d(Hom_RectL_to_Base,X_CCS,Y_CCS,Z_CCS,tempbx,tempby,tempbz)</l>
+<l>            Basex:=tempbx-0.003</l>
+<l>            Basey:=tempby-0.014</l>
+<l>            Basez:=tempbz+0.015    </l>
+<l>            mched:=true</l>
+<c>            *小值判断为错误抓取</c>
+<l>*             jjwrong:=abs(OldBasex-Basex)+abs(OldBasey-Basey)</l>
+<l>*               if(jjwrong&gt;0.003)</l>
+<l>                   Basexs:=[Basexs,Basex]</l>
+<l>                   Baseys:=[Baseys,Basey]</l>
+<l>                   Basezs:=[Basezs,Basez]  </l>
+<l>*               endif            </l>
+<l>            write_image(ImageRectifiedR,'png',0,'rimg')</l>
+<l>           endif  </l>
+<l>        endfor</l>
+<l>      endif</l>
+<c>*记录匹配点坐标</c>
+<c></c>
+<l>endfor</l>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="check_epipolar_constraint">
+<interface>
+<io>
+<par name="ImageRectifiedL" base_type="iconic" dimension="0"/>
+<par name="ImageRectifiedR" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="RectCamParL" base_type="ctrl" dimension="0"/>
+<par name="RectCamParR" base_type="ctrl" dimension="0"/>
+<par name="WindowHandle1" base_type="ctrl" dimension="0"/>
+<par name="WindowHandle2" base_type="ctrl" dimension="0"/>
+<par name="CaltabFile" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="EpipolarError" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* Check the epipolar constraint on the rectified images:</c>
+<c>*    (the differences of the features' row coordinates should be small)</c>
+<c>* Parameter settings for find_caltab and find_marks_and_pose</c>
+<l>SizeGauss := 3</l>
+<l>MarkThresh := 120</l>
+<l>MinDiamMarks := 5</l>
+<l>StartThresh := 128</l>
+<l>DeltaThresh := 10</l>
+<l>MinThresh := 18</l>
+<l>Alpha := 0.9</l>
+<l>MinContLength := 15</l>
+<l>MaxDiamMarks := 100</l>
+<c>* </c>
+<c>* Find the calibration points and the correspondences of these points in both images:</c>
+<l>find_caltab (ImageRectifiedL, CaltabL, CaltabFile, SizeGauss, MarkThresh, MinDiamMarks)</l>
+<l>find_marks_and_pose (ImageRectifiedL, CaltabL, CaltabFile, RectCamParL, StartThresh, DeltaThresh, MinThresh, Alpha, MinContLength, MaxDiamMarks, RCoordL, CCoordL, StartPoseL)</l>
+<l>find_caltab (ImageRectifiedR, CaltabR, CaltabFile, SizeGauss, MarkThresh, MinDiamMarks)</l>
+<l>find_marks_and_pose (ImageRectifiedR, CaltabR, CaltabFile, RectCamParR, StartThresh, DeltaThresh, MinThresh, Alpha, MinContLength, MaxDiamMarks, RCoordR, CCoordR, StartPoseR)</l>
+<l>EpipolarError := max(abs(RCoordR - RCoordL))</l>
+<c>* Visualize the rectified images and the result of the epipolar test:</c>
+<l>dev_set_window (WindowHandle1)</l>
+<l>dev_set_color ('yellow')</l>
+<l>dev_clear_window ()</l>
+<l>dev_set_part (0, 0, RectCamParL[7] - 1, RectCamParL[6] - 1)</l>
+<l>dev_display (ImageRectifiedL)</l>
+<l>for Index := 6 to 49 by 7</l>
+<c>    * Display the epipolar line of a certain point</c>
+<l>    gen_contour_polygon_xld (EpipolarLine, [round(RCoordL[Index]),round(RCoordL[Index])], [0,RectCamParL[6] - 1])</l>
+<l>    dev_display (EpipolarLine)</l>
+<l>endfor</l>
+<l>gen_cross_contour_xld (Cross, RCoordL, CCoordL, 6, 0)</l>
+<l>dev_display (Cross)</l>
+<l>String := 'Maximum measured error of the'</l>
+<l>String[1] := 'epipolar constraint: ' + EpipolarError$'.3f' + ' px'</l>
+<l>disp_message (WindowHandle1, String, 'window', 180, 12, 'white', 'false')</l>
+<l>dev_set_window (WindowHandle2)</l>
+<l>dev_set_color ('yellow')</l>
+<l>dev_clear_window ()</l>
+<l>dev_set_part (0, 0, RectCamParR[7] - 1, RectCamParR[6] - 1)</l>
+<l>dev_display (ImageRectifiedR)</l>
+<l>for Index := 6 to 49 by 7</l>
+<c>    * display the epipolar line of a certain point</c>
+<l>    gen_contour_polygon_xld (EpipolarLine, [round(RCoordL[Index]),round(RCoordL[Index])], [0,RectCamParL[6] - 1])</l>
+<l>    dev_display (EpipolarLine)</l>
+<l>endfor</l>
+<l>gen_cross_contour_xld (Cross, RCoordR, CCoordR, 6, 0)</l>
+<l>dev_display (Cross)</l>
+<l>return ()</l>
+</body>
+<docu id="check_epipolar_constraint">
+<parameters>
+<parameter id="CaltabFile"/>
+<parameter id="EpipolarError"/>
+<parameter id="ImageRectifiedL"/>
+<parameter id="ImageRectifiedR"/>
+<parameter id="RectCamParL"/>
+<parameter id="RectCamParR"/>
+<parameter id="WindowHandle1"/>
+<parameter id="WindowHandle2"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="display_match_pose">
+<interface>
+<ic>
+<par name="ShapeModel3DID" base_type="ctrl" dimension="0"/>
+<par name="Pose" base_type="ctrl" dimension="0"/>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>* Construct the degree sign</c>
+<l>tuple_chr (0xb0, DegreeSign)</l>
+<l>get_shape_model_3d_params (ShapeModel3DID, 'reference_point', ReferencePoint)</l>
+<l>get_shape_model_3d_params (ShapeModel3DID, 'cam_param', CamParam)</l>
+<c>* </c>
+<c>* Project the reference point</c>
+<l>pose_to_hom_mat3d (Pose, HomMat3D)</l>
+<l>affine_trans_point_3d (HomMat3D, ReferencePoint[0], ReferencePoint[1], ReferencePoint[2], X, Y, Z)</l>
+<l>project_3d_point (X, Y, Z, CamParam, Row, Column)</l>
+<l>* stop()</l>
+<c>* Display the pose at the projected reference point</c>
+<l>set_tposition (WindowHandle, Row, Column - 10)</l>
+<l>write_string (WindowHandle, 'Pose:')</l>
+<l>set_tposition (WindowHandle, Row + 15, Column)</l>
+<l>write_string (WindowHandle, 'X: ' + (1000 * Pose[0])$'4.1f' + ' mm')</l>
+<l>set_tposition (WindowHandle, Row + 30, Column)</l>
+<l>write_string (WindowHandle, 'Y: ' + (1000 * Pose[1])$'4.1f' + ' mm')</l>
+<l>set_tposition (WindowHandle, Row + 45, Column)</l>
+<l>write_string (WindowHandle, 'Z: ' + (1000 * Pose[2])$'4.1f' + ' mm')</l>
+<l>set_tposition (WindowHandle, Row + 60, Column)</l>
+<l>write_string (WindowHandle, 'Alpha: ' + Pose[3]$'4.1f' + DegreeSign)</l>
+<l>set_tposition (WindowHandle, Row + 75, Column)</l>
+<l>write_string (WindowHandle, 'Beta: ' + Pose[4]$'4.1f' + DegreeSign)</l>
+<l>set_tposition (WindowHandle, Row + 90, Column)</l>
+<l>write_string (WindowHandle, 'Gamma: ' + Pose[5]$'4.1f' + DegreeSign)</l>
+<l>return ()</l>
+</body>
+<docu id="display_match_pose">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Display a 3D matching pose at the projected reference point</short>
+<short lang="zh_CN">Display a 3D matching pose at the projected reference point</short>
+<parameters>
+<parameter id="Pose"/>
+<parameter id="ShapeModel3DID"/>
+<parameter id="WindowHandle"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>

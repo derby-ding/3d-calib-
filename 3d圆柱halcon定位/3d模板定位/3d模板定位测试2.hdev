@@ -1,0 +1,326 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.1" halcon_version="12.0">
+<procedure name="main">
+<interface/>
+<body>
+<l>dev_close_window()</l>
+<c></c>
+<l>dev_open_window(0, 0, 512, 512, 'black', WindowHandle)</l>
+<l>* PsampleDir:='Image/训练样本/'</l>
+<l>ImageDirL:='lefttest0.bmp'</l>
+<l>ImageDirR:='righttest0.bmp'</l>
+<l>* list_files(PsampleDir,'files',Psamples)</l>
+<l>* tuple_regexp_select(Psamples,'.png',Psamplename)</l>
+<l>read_tuple('disparityconstraint.dat',disparityconstraint)</l>
+<l>disparityconstraintCol:=disparityconstraint[1]</l>
+<l>disparityconstraintRow:=disparityconstraint[0]</l>
+<l>read_image(MapL,'MapL.tif')</l>
+<l>read_image(MapR,'MapR.tif')</l>
+<l>read_cam_par('RectCamParamLeft.dat',RectCamParL)</l>
+<l>read_cam_par('RectCamParamRight.dat',RectCamParR)</l>
+<l>read_pose('RectReleatPoseL2R.dat',RectLPosRectR)</l>
+<l>read_pose('rectcamrinbase.dat',rectcamrinbasepose)</l>
+<l>pose_invert(RectLPosRectR,RectLinRectR)</l>
+<c></c>
+<l>pose_compose(rectcamrinbasepose,RectLinRectR,RectLinBase)</l>
+<l>pose_to_hom_mat3d(rectcamrinbasepose,Hom_RectR_to_Base)</l>
+<l>pose_to_hom_mat3d(RectLinBase,Hom_RectL_to_Base)</l>
+<l>pose_to_hom_mat3d(RectLPosRectR,Hom_RectR_to_RectL)</l>
+<c>*记录检测和匹配的点，可视化使用</c>
+<l>pointrdx:=[]</l>
+<l>pointrdy:=[]</l>
+<l>pointmcx:=[]</l>
+<l>pointmcy:=[]</l>
+<c>*3d坐标</c>
+<l>Basexs:=[]</l>
+<l>Baseys:=[]</l>
+<l>Basezs:=[]</l>
+<c>*模板</c>
+<l>try</l>
+<l>    read_shape_model_3d ('lcylinder.sm3', LShapeModel3D)</l>
+<l>catch (Exception)</l>
+<l>    read_object_model_3d ('bl.STL', 'mm', [], [], ObjectModel3D, DxfStatus)</l>
+<l>    prepare_object_model_3d (ObjectModel3D, 'shape_based_matching_3d', 'true', [], [])</l>
+<l>    create_shape_model_3d (ObjectModel3D, RectCamParL, rad(90), 0, 0, 'gba', 0, rad(45), 0, 0.5, 0, rad(180), 1, 1.4, 7, 'num_levels', 5, LShapeModel3D)</l>
+<l>    write_shape_model_3d(LShapeModel3D,'lcylinder.sm3')</l>
+<l>    clear_object_model_3d(ObjectModel3D)</l>
+<l>endtry</l>
+<l>try</l>
+<l>    read_shape_model_3d ('rcylinder.sm3', RShapeModel3D)</l>
+<l>catch (Exception)</l>
+<l>    read_object_model_3d ('bl.STL', 'mm', [], [], ObjectModel3D, DxfStatus)</l>
+<l>    prepare_object_model_3d (ObjectModel3D, 'shape_based_matching_3d', 'true', [], [])</l>
+<l>    create_shape_model_3d (ObjectModel3D, RectCamParR, rad(90), 0, 0, 'gba', 0, rad(45), 0, 0.5, 0, rad(180), 1, 1.4, 7, 'num_levels', 5, RShapeModel3D)</l>
+<l>    write_shape_model_3d(RShapeModel3D,'rcylinder.sm3')</l>
+<l>    clear_object_model_3d(ObjectModel3D)</l>
+<l>endtry</l>
+<c></c>
+<c>*读取图像检测物体并匹配</c>
+<l>read_image (ImageL1, ImageDirL)</l>
+<l>rotate_image(ImageL1, ImageL, 180, 'constant')</l>
+<l>emphasize(ImageL,ImageEmphasizeL, 7, 7, 1)</l>
+<l>read_image (ImageR, ImageDirR)</l>
+<l>emphasize(ImageR, ImageEmphasizeR, 7, 7, 1)</l>
+<l>map_image (ImageEmphasizeL, MapL, ImageRectifiedL)</l>
+<l>map_image (ImageEmphasizeR, MapR, ImageRectifiedR)</l>
+<l>write_image(ImageRectifiedR,'png',0,'rimg')</l>
+<l>write_image(ImageRectifiedL,'png',0,'limg')</l>
+<l>find_shape_model_3d(ImageRectifiedL,LShapeModel3D,0.93,0.1,0,['num_matches','max_overlap','pose_refinement'], [5,0.2,'least_squares'], Posel, CovPosel, Scorel)</l>
+<c></c>
+<l>dev_display(ImageRectifiedL) </l>
+<l>for I := 0 to |Scorel| - 1 by 1</l>
+<l>        PoseI := Posel[I * 7:I * 7 + 6]</l>
+<c>        * Visualize the found matches in the image by</c>
+<c>        * - projecting the 3D shape model with the pose of the match</c>
+<l>        project_shape_model_3d (ModelContours, LShapeModel3D, RectCamParL, PoseI, 'true', 0.523599)</l>
+<l>        dev_set_color ('blue')</l>
+<l>        dev_display (ModelContours)</l>
+<c>        * - projecting the coordinate system of the 3D object model</c>
+<l>        dev_set_color ('coral')</l>
+<l>        disp_3d_coord_system (WindowHandle, RectCamParL, PoseI, 0.015)</l>
+<c>        *rectify x to 90 z to 0 degree</c>
+<l>        x:=PoseI[3]</l>
+<l>        tuple_fmod(x,10,mod1)</l>
+<l>        PoseI[3]:=mod1</l>
+<l>        tuple_fmod(PoseI[5],90,mod2)</l>
+<l>        PoseI[5]:=mod2</l>
+<l>        pose_compose(PoseI,[0,0,0,-mod1,0,-mod2,0],NewPose)</l>
+<c>        * Display the parameters of the found pose</c>
+<l>        dev_set_color ('magenta')</l>
+<l>        display_match_pose (LShapeModel3D, NewPose, WindowHandle)</l>
+<l>        stop()</l>
+<l> endfor</l>
+<l> dev_clear_window()</l>
+<c> </c>
+<l> find_shape_model_3d(ImageRectifiedR,RShapeModel3D,0.93,0.1,0,['num_matches','max_overlap','pose_refinement'], [5,0.2,'least_squares'], Poser, CovPoser, Scorer)</l>
+<c></c>
+<l>dev_display(ImageRectifiedR) </l>
+<l>for I := 0 to |Scorer| - 1 by 1</l>
+<l>        PoseI := Poser[I * 7:I * 7 + 6]</l>
+<c>        * Visualize the found matches in the image by</c>
+<c>        * - projecting the 3D shape model with the pose of the match</c>
+<l>        project_shape_model_3d (ModelContours, RShapeModel3D, RectCamParR, PoseI, 'true', 0.523599)</l>
+<l>        dev_set_color ('blue')</l>
+<l>        dev_display (ModelContours)</l>
+<c>        * - projecting the coordinate system of the 3D object model</c>
+<l>        dev_set_color ('coral')</l>
+<l>        disp_3d_coord_system (WindowHandle, RectCamParR, PoseI, 0.015)</l>
+<c>        * Display the parameters of the found pose</c>
+<l>        dev_set_color ('magenta')</l>
+<l>        display_match_pose (RShapeModel3D, PoseI, WindowHandle)</l>
+<l>        stop()</l>
+<l> endfor</l>
+<c> </c>
+<l> dev_clear_window()</l>
+<c>*手动测量的棒料大小</c>
+<l>PatternWidth:=70</l>
+<l>PatternHeight:=165</l>
+<c>*匹配棒材，右视图</c>
+<l>get_image_size (ImageRectifiedR, RectWidth, RectHeight)</l>
+<c></c>
+<l>for I:=0 to |Scorel|-1 by 1</l>
+<l>       dev_display(ImageRectifiedL) </l>
+<l>       PoseI := Posel[I * 7:I * 7 + 6]       </l>
+<l>        get_shape_model_3d_params (LShapeModel3D, 'reference_point', ReferencePoint)</l>
+<c>* 计算棒料在右相机坐标下的参考值</c>
+<l>        pose_to_hom_mat3d (PoseI, HomMat3D)</l>
+<l>        affine_trans_point_3d (HomMat3D, ReferencePoint[0], ReferencePoint[1], ReferencePoint[2], X, Y, Z)</l>
+<l>        project_3d_point (X, Y, Z, RectCamParL, Rowl, Columnl)        </l>
+<l>        pose_invert(PoseI,rectcamlinbl)</l>
+<l>        pose_compose(RectLinRectR,PoseI,blinrectcamr)</l>
+<l>*         stop()</l>
+<c></c>
+<l>       mched:=false </l>
+<l>       for J:=0 to |Scorer|-1 by 1 </l>
+<l>        PoseIr := Poser[J*7:J*7+6]</l>
+<c>        *相对于右相机的3d坐标转换成相对左相机的3d坐标，与左相机下匹配的3d物体坐标进行对比。</c>
+<l>        affine_trans_point_3d(Hom_RectR_to_RectL,PoseIr[0],PoseIr[1],PoseIr[2],temx,temy,temz)</l>
+<l>        pose_compose(RectLinRectR,PoseI,PoseInr)</l>
+<c>        </c>
+<c>        * Visualize the found matches in the image by</c>
+<c>        * - projecting the 3D shape model with the pose of the match</c>
+<l>        project_shape_model_3d (ModelContours, RShapeModel3D, RectCamParR, PoseIr, 'true', 0.523599)</l>
+<l>        dev_set_color ('blue')</l>
+<l>        dev_display (ModelContours)</l>
+<c></c>
+<l>        project_shape_model_3d (ModelContours1, RShapeModel3D, RectCamParR, PoseInr, 'true', 0.523599)</l>
+<l>        dev_set_color ('green')</l>
+<l>        dev_display (ModelContours1)</l>
+<c>        * - projecting the coordinate system of the 3D object model</c>
+<l>        dev_set_color ('coral')</l>
+<l>        disp_3d_coord_system (WindowHandle, RectCamParR, PoseIr, 0.015)</l>
+<c>        * Display the parameters of the found pose</c>
+<l>        dev_set_color ('magenta')</l>
+<l>        display_match_pose (RShapeModel3D, PoseIr, WindowHandle)</l>
+<l>* stop()</l>
+<l>        get_shape_model_3d_params (RShapeModel3D, 'reference_point', ReferencePoint)     </l>
+<c>       * Project the reference point</c>
+<l>        pose_to_hom_mat3d (PoseIr, HomMat3D)</l>
+<l>        affine_trans_point_3d (HomMat3D, ReferencePoint[0], ReferencePoint[1], ReferencePoint[2], X, Y, Z)</l>
+<l>        project_3d_point (X, Y, Z, RectCamParR, Rowr, Columnr)</l>
+<c>       *约束条件</c>
+<l>        TRow:=abs(Rowr-Rowl)</l>
+<l>        TCol:=abs(Columnr-Columnl)</l>
+<l>        TPos:=abs(temz-PoseI[2])+abs(temy-PoseI[1])</l>
+<l>*         Rotj:=abs(PoseInr[3]-PoseIr[3])+abs(PoseInr[4]-PoseIr[4])</l>
+<l>        TRot:=abs(PoseInr[4]-PoseIr[4])</l>
+<l>        stop()</l>
+<c>          *正确匹配后，记录匹配点和3d位置。</c>
+<l>        if((mched==false) and (TRow&lt;10) and (TPos&lt;0.015) and (TRot&lt;5))</l>
+<l>*             stop()</l>
+<l>            MatchedcolL:=Columnl</l>
+<l>            MatchedcolR:=Columnr</l>
+<l>            MatchedrowL:=Rowl</l>
+<l>            MatchedrowR:=Rowr</l>
+<l>            disparity_to_point_3d (RectCamParL, RectCamParR, RectLPosRectR,  MatchedrowL, MatchedcolL,MatchedcolR-MatchedcolL, X_CCS, Y_CCS, Z_CCS)</l>
+<l>            affine_trans_point_3d(Hom_RectL_to_Base,X_CCS,Y_CCS,Z_CCS,tempbx,tempby,tempbz)</l>
+<l>            Basex:=tempbx-0.003</l>
+<l>            Basey:=tempby-0.014</l>
+<l>            Basez:=tempbz+abs(sin((PoseIr[4]+90)/180*3.14)) * 0.010 +0.006</l>
+<l>            mched:=true</l>
+<c>            </c>
+<l>            Basexs:=[Basexs,Basex]</l>
+<l>            Baseys:=[Baseys,Basey]</l>
+<l>            Basezs:=[Basezs,Basez]</l>
+<l>        endif  </l>
+<l>        endfor</l>
+<c></c>
+<l>endfor</l>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="check_epipolar_constraint">
+<interface>
+<io>
+<par name="ImageRectifiedL" base_type="iconic" dimension="0"/>
+<par name="ImageRectifiedR" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="RectCamParL" base_type="ctrl" dimension="0"/>
+<par name="RectCamParR" base_type="ctrl" dimension="0"/>
+<par name="WindowHandle1" base_type="ctrl" dimension="0"/>
+<par name="WindowHandle2" base_type="ctrl" dimension="0"/>
+<par name="CaltabFile" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="EpipolarError" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* Check the epipolar constraint on the rectified images:</c>
+<c>*    (the differences of the features' row coordinates should be small)</c>
+<c>* Parameter settings for find_caltab and find_marks_and_pose</c>
+<l>SizeGauss := 3</l>
+<l>MarkThresh := 120</l>
+<l>MinDiamMarks := 5</l>
+<l>StartThresh := 128</l>
+<l>DeltaThresh := 10</l>
+<l>MinThresh := 18</l>
+<l>Alpha := 0.9</l>
+<l>MinContLength := 15</l>
+<l>MaxDiamMarks := 100</l>
+<c>* </c>
+<c>* Find the calibration points and the correspondences of these points in both images:</c>
+<l>find_caltab (ImageRectifiedL, CaltabL, CaltabFile, SizeGauss, MarkThresh, MinDiamMarks)</l>
+<l>find_marks_and_pose (ImageRectifiedL, CaltabL, CaltabFile, RectCamParL, StartThresh, DeltaThresh, MinThresh, Alpha, MinContLength, MaxDiamMarks, RCoordL, CCoordL, StartPoseL)</l>
+<l>find_caltab (ImageRectifiedR, CaltabR, CaltabFile, SizeGauss, MarkThresh, MinDiamMarks)</l>
+<l>find_marks_and_pose (ImageRectifiedR, CaltabR, CaltabFile, RectCamParR, StartThresh, DeltaThresh, MinThresh, Alpha, MinContLength, MaxDiamMarks, RCoordR, CCoordR, StartPoseR)</l>
+<l>EpipolarError := max(abs(RCoordR - RCoordL))</l>
+<c>* Visualize the rectified images and the result of the epipolar test:</c>
+<l>dev_set_window (WindowHandle1)</l>
+<l>dev_set_color ('yellow')</l>
+<l>dev_clear_window ()</l>
+<l>dev_set_part (0, 0, RectCamParL[7] - 1, RectCamParL[6] - 1)</l>
+<l>dev_display (ImageRectifiedL)</l>
+<l>for Index := 6 to 49 by 7</l>
+<c>    * Display the epipolar line of a certain point</c>
+<l>    gen_contour_polygon_xld (EpipolarLine, [round(RCoordL[Index]),round(RCoordL[Index])], [0,RectCamParL[6] - 1])</l>
+<l>    dev_display (EpipolarLine)</l>
+<l>endfor</l>
+<l>gen_cross_contour_xld (Cross, RCoordL, CCoordL, 6, 0)</l>
+<l>dev_display (Cross)</l>
+<l>String := 'Maximum measured error of the'</l>
+<l>String[1] := 'epipolar constraint: ' + EpipolarError$'.3f' + ' px'</l>
+<l>disp_message (WindowHandle1, String, 'window', 180, 12, 'white', 'false')</l>
+<l>dev_set_window (WindowHandle2)</l>
+<l>dev_set_color ('yellow')</l>
+<l>dev_clear_window ()</l>
+<l>dev_set_part (0, 0, RectCamParR[7] - 1, RectCamParR[6] - 1)</l>
+<l>dev_display (ImageRectifiedR)</l>
+<l>for Index := 6 to 49 by 7</l>
+<c>    * display the epipolar line of a certain point</c>
+<l>    gen_contour_polygon_xld (EpipolarLine, [round(RCoordL[Index]),round(RCoordL[Index])], [0,RectCamParL[6] - 1])</l>
+<l>    dev_display (EpipolarLine)</l>
+<l>endfor</l>
+<l>gen_cross_contour_xld (Cross, RCoordR, CCoordR, 6, 0)</l>
+<l>dev_display (Cross)</l>
+<l>return ()</l>
+</body>
+<docu id="check_epipolar_constraint">
+<parameters>
+<parameter id="CaltabFile"/>
+<parameter id="EpipolarError"/>
+<parameter id="ImageRectifiedL"/>
+<parameter id="ImageRectifiedR"/>
+<parameter id="RectCamParL"/>
+<parameter id="RectCamParR"/>
+<parameter id="WindowHandle1"/>
+<parameter id="WindowHandle2"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="display_match_pose">
+<interface>
+<ic>
+<par name="ShapeModel3DID" base_type="ctrl" dimension="0"/>
+<par name="Pose" base_type="ctrl" dimension="0"/>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>* Construct the degree sign</c>
+<l>tuple_chr (0xb0, DegreeSign)</l>
+<l>get_shape_model_3d_params (ShapeModel3DID, 'reference_point', ReferencePoint)</l>
+<l>get_shape_model_3d_params (ShapeModel3DID, 'cam_param', CamParam)</l>
+<c>* </c>
+<c>* Project the reference point</c>
+<l>pose_to_hom_mat3d (Pose, HomMat3D)</l>
+<l>affine_trans_point_3d (HomMat3D, ReferencePoint[0], ReferencePoint[1], ReferencePoint[2], X, Y, Z)</l>
+<l>project_3d_point (X, Y, Z, CamParam, Row, Column)</l>
+<l>* stop()</l>
+<c>* Display the pose at the projected reference point</c>
+<l>set_tposition (WindowHandle, Row, Column - 10)</l>
+<l>write_string (WindowHandle, 'Pose:')</l>
+<l>set_tposition (WindowHandle, Row + 15, Column)</l>
+<l>write_string (WindowHandle, 'X: ' + (1000 * Pose[0])$'4.1f' + ' mm')</l>
+<l>set_tposition (WindowHandle, Row + 30, Column)</l>
+<l>write_string (WindowHandle, 'Y: ' + (1000 * Pose[1])$'4.1f' + ' mm')</l>
+<l>set_tposition (WindowHandle, Row + 45, Column)</l>
+<l>write_string (WindowHandle, 'Z: ' + (1000 * Pose[2])$'4.1f' + ' mm')</l>
+<l>set_tposition (WindowHandle, Row + 60, Column)</l>
+<l>write_string (WindowHandle, 'Alpha: ' + Pose[3]$'4.1f' + DegreeSign)</l>
+<l>set_tposition (WindowHandle, Row + 75, Column)</l>
+<l>write_string (WindowHandle, 'Beta: ' + Pose[4]$'4.1f' + DegreeSign)</l>
+<l>set_tposition (WindowHandle, Row + 90, Column)</l>
+<l>write_string (WindowHandle, 'Gamma: ' + Pose[5]$'4.1f' + DegreeSign)</l>
+<l>return ()</l>
+</body>
+<docu id="display_match_pose">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Display a 3D matching pose at the projected reference point</short>
+<short lang="zh_CN">Display a 3D matching pose at the projected reference point</short>
+<parameters>
+<parameter id="Pose"/>
+<parameter id="ShapeModel3DID"/>
+<parameter id="WindowHandle"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>

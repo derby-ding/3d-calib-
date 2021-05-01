@@ -1,0 +1,1838 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hdevelop file_version="1.1" halcon_version="12.0">
+<procedure name="main">
+<interface/>
+<body>
+<l>dev_close_window ()</l>
+<l>dev_open_window (0, 0,659, 494, 'black', WindowHandle)</l>
+<l>* gen_empty_object_model_3d(ObjMod3d)</l>
+<l>* gen_cylinder_object_model_3d([0,0,0,0,0,0,0],0.039,-0.046,0.046,ObjectModel3D)</l>
+<l>* ObjectModels := [ObjectModel3D]</l>
+<l>* Labels := ['Cylinder']</l>
+<l>* VisParamName := ['color_0']</l>
+<l>* VisParamValue := ['cyan']</l>
+<l>* Title := ''</l>
+<l>* visualize_object_model_3d_new (WindowHandle, ObjectModels, [], 0.0, VisParamName, VisParamValue, Title, Labels, [], PoseOut)</l>
+<l>CamParam := [0.016,-121,7.3958e-6,7.4e-6,328.21,245.92,659,494]</l>
+<l>try</l>
+<l>    read_shape_model_3d ('cylinder.sm3', ShapeModel3DID)</l>
+<l>    disp_object_model_3d_safe (WindowHandle, ObjectModel3D, CamParam, [0,0,1.2,90,0,0,0], [], [])</l>
+<l>catch (Exception)</l>
+<l>    read_object_model_3d ('bl.STL', 'mm', [], [], ObjectModel3D, DxfStatus)</l>
+<l>    prepare_object_model_3d (ObjectModel3D, 'shape_based_matching_3d', 'true', [], [])</l>
+<l>    create_shape_model_3d (ObjectModel3D, CamParam, rad(0), rad(0), rad(0), 'gba', 0, 0, 0, rad(45), 0, rad(360), 1.1, 1.35, 10, 'num_levels', 4, ShapeModel3DID)</l>
+<l>    disp_object_model_3d_safe (WindowHandle, ObjectModel3D, CamParam, [0,0,1.2,90,0,0,0], [], [])</l>
+<l>    stop()</l>
+<l>    write_shape_model_3d(ShapeModel3DID,'cylinder.sm3')</l>
+<l>    clear_object_model_3d(ObjectModel3D)</l>
+<l>endtry</l>
+<l>* stop()</l>
+<l>ImageDir:='E:/拓峰视觉项目/双目立体视觉应用程序/ding双目摄像头棒材/立体视觉伺服/方案/定位/棒材检测/测试图像/dingk/lefttest'</l>
+<c>*'E:/拓峰视觉项目/双目立体视觉应用程序/测试图像集/棒料/SaveBMP_1/'</c>
+<l>for i:=1 to 10 by 1</l>
+<l>read_image(Image,ImageDir+i$'01d')</l>
+<l>find_shape_model_3d(Image,ShapeModel3DID,0.7,0.8,4,[], [], Pose, CovPose, Score)</l>
+<l> for I := 0 to |Score| - 1 by 1</l>
+<l>        PoseI := Pose[I * 7:I * 7 + 6]</l>
+<l>        CovPoseI := CovPose[I * 6:I * 6 + 5]</l>
+<l>        ScoreI := Score[I]</l>
+<c>        * Visualize the found matches in the image by</c>
+<c>        * - projecting the 3D shape model with the pose of the match</c>
+<l>        project_shape_model_3d (ModelContours, ShapeModel3DID, CamParam, PoseI, 'true', 0.523599)</l>
+<l>        dev_set_color ('blue')</l>
+<l>        dev_display (ModelContours)</l>
+<c>        * - projecting the coordinate system of the 3D object model</c>
+<l>        dev_set_color ('coral')</l>
+<l>        disp_3d_coord_system (WindowHandle, CamParam, PoseI, 0.015)</l>
+<c>        * Display the parameters of the found pose</c>
+<l>        dev_set_color ('magenta')</l>
+<l>        display_match_pose (ShapeModel3DID, PoseI, WindowHandle)</l>
+<l> stop()   </l>
+<l> endfor</l>
+<c>    </c>
+<l>endfor</l>
+</body>
+<docu id="main">
+<parameters/>
+</docu>
+</procedure>
+<procedure name="display_match_pose">
+<interface>
+<ic>
+<par name="ShapeModel3DID" base_type="ctrl" dimension="0"/>
+<par name="Pose" base_type="ctrl" dimension="0"/>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>* Construct the degree sign</c>
+<l>tuple_chr (0xb0, DegreeSign)</l>
+<l>get_shape_model_3d_params (ShapeModel3DID, 'reference_point', ReferencePoint)</l>
+<l>get_shape_model_3d_params (ShapeModel3DID, 'cam_param', CamParam)</l>
+<c>* </c>
+<c>* Project the reference point</c>
+<l>pose_to_hom_mat3d (Pose, HomMat3D)</l>
+<l>affine_trans_point_3d (HomMat3D, ReferencePoint[0], ReferencePoint[1], ReferencePoint[2], X, Y, Z)</l>
+<l>project_3d_point (X, Y, Z, CamParam, Row, Column)</l>
+<c>* </c>
+<c>* Display the pose at the projected reference point</c>
+<l>set_tposition (WindowHandle, Row, Column - 10)</l>
+<l>write_string (WindowHandle, 'Pose:')</l>
+<l>set_tposition (WindowHandle, Row + 15, Column)</l>
+<l>write_string (WindowHandle, 'X: ' + (1000 * Pose[0])$'4.1f' + ' mm')</l>
+<l>set_tposition (WindowHandle, Row + 30, Column)</l>
+<l>write_string (WindowHandle, 'Y: ' + (1000 * Pose[1])$'4.1f' + ' mm')</l>
+<l>set_tposition (WindowHandle, Row + 45, Column)</l>
+<l>write_string (WindowHandle, 'Z: ' + (1000 * Pose[2])$'4.1f' + ' mm')</l>
+<l>set_tposition (WindowHandle, Row + 60, Column)</l>
+<l>write_string (WindowHandle, 'Alpha: ' + Pose[3]$'4.1f' + DegreeSign)</l>
+<l>set_tposition (WindowHandle, Row + 75, Column)</l>
+<l>write_string (WindowHandle, 'Beta: ' + Pose[4]$'4.1f' + DegreeSign)</l>
+<l>set_tposition (WindowHandle, Row + 90, Column)</l>
+<l>write_string (WindowHandle, 'Gamma: ' + Pose[5]$'4.1f' + DegreeSign)</l>
+<l>return ()</l>
+</body>
+<docu id="display_match_pose">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Display a 3D matching pose at the projected reference point</short>
+<short lang="zh_CN">Display a 3D matching pose at the projected reference point</short>
+<parameters>
+<parameter id="Pose"/>
+<parameter id="ShapeModel3DID"/>
+<parameter id="WindowHandle"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="gen_menu_regions">
+<interface>
+<oo>
+<par name="MenuRegions" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="NumCols" base_type="ctrl" dimension="0"/>
+<par name="NumRows" base_type="ctrl" dimension="0"/>
+<par name="PercentageHeight" base_type="ctrl" dimension="0"/>
+<par name="TopBottom" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>* Generate the menu buttons</c>
+<l>if (TopBottom != 'top' and TopBottom != 'bottom')</l>
+<l>    stop ()</l>
+<c>    * Wrong parameter: TopBottom must be 'top' or 'bottom'</c>
+<l>endif</l>
+<l>get_part (WindowHandle, PartRow1, PartCol1, PartRow2, PartCol2)</l>
+<l>Height := PartRow2 - PartRow1 + 1</l>
+<l>Width := PartCol2 - PartCol1 + 1</l>
+<l>MenuHeight := Height * PercentageHeight / 100.0</l>
+<l>MenuWidth := Width</l>
+<l>ButtonHeight := MenuHeight / NumRows</l>
+<l>ButtonWidth := MenuWidth / NumCols</l>
+<l>if (TopBottom == 'top')</l>
+<l>    Row0 := PartRow1</l>
+<l>endif</l>
+<l>if (TopBottom == 'bottom')</l>
+<l>    Row0 := PartRow2 - MenuHeight</l>
+<l>endif</l>
+<l>Col0 := PartCol1</l>
+<l>gen_empty_obj (MenuRegions)</l>
+<l>for c := 0 to NumCols - 1 by 1</l>
+<l>    for r := 0 to NumRows - 1 by 1</l>
+<l>        gen_rectangle1 (Rectangle, Row0 + r * ButtonHeight, Col0 + c * ButtonWidth, Row0 + r * ButtonHeight + ButtonHeight - 1, Col0 + c * ButtonWidth + ButtonWidth - 1)</l>
+<l>        concat_obj (MenuRegions, Rectangle, MenuRegions)</l>
+<l>    endfor</l>
+<l>endfor</l>
+<l>return ()</l>
+</body>
+<docu id="gen_menu_regions">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Creates rectangular regions at the top or bottom of the current window</short>
+<short lang="zh_CN">Creates rectangular regions at the top or bottom of the current window</short>
+<parameters>
+<parameter id="MenuRegions"/>
+<parameter id="NumCols"/>
+<parameter id="NumRows"/>
+<parameter id="PercentageHeight"/>
+<parameter id="TopBottom"/>
+<parameter id="WindowHandle"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="get_selected_button">
+<interface>
+<io>
+<par name="MenuRegions" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="Texts" base_type="ctrl" dimension="0"/>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="Row" base_type="ctrl" dimension="0"/>
+<par name="Col" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="SelectedButton" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>count_obj (MenuRegions, NumberRegions)</l>
+<l>NumberTexts := |Texts|</l>
+<l>if (NumberRegions != NumberTexts)</l>
+<l>    stop ()</l>
+<c>    * Wrong number of regions or texts</c>
+<l>endif</l>
+<l>SelectedButton := ''</l>
+<l>dev_set_check ('~give_error')</l>
+<l>for i := 1 to NumberRegions by 1</l>
+<l>    select_obj (MenuRegions, MenuRegion, i)</l>
+<l>    test_region_point (MenuRegion, Row, Col, IsInside)</l>
+<l>    if (IsInside)</l>
+<l>        SelectedButton := Texts[i - 1]</l>
+<l>    endif</l>
+<l>endfor</l>
+<l>dev_set_check ('give_error')</l>
+<l>return ()</l>
+</body>
+<docu id="get_selected_button">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Determine the text of the selected button</short>
+<short lang="zh_CN">Determine the text of the selected button</short>
+<parameters>
+<parameter id="Col"/>
+<parameter id="MenuRegions"/>
+<parameter id="Row"/>
+<parameter id="SelectedButton"/>
+<parameter id="Texts"/>
+<parameter id="WindowHandle"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="project_point_on_trackball">
+<interface>
+<ic>
+<par name="X" base_type="ctrl" dimension="0"/>
+<par name="Y" base_type="ctrl" dimension="0"/>
+<par name="VirtualTrackball" base_type="ctrl" dimension="0"/>
+<par name="TrackballSize" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="V" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>if (VirtualTrackball == 'shoemake')</l>
+<c>    * Virtual Trackball according to Shoemake</c>
+<l>    R := sqrt(X * X + Y * Y)</l>
+<l>    if (R &lt;= TrackballSize)</l>
+<l>        XP := X</l>
+<l>        YP := Y</l>
+<l>        ZP := sqrt(TrackballSize * TrackballSize - R * R)</l>
+<l>    else</l>
+<l>        XP := X * TrackballSize / R</l>
+<l>        YP := Y * TrackballSize / R</l>
+<l>        ZP := 0</l>
+<l>    endif</l>
+<l>else</l>
+<c>    * Virtual Trackball according to Bell</c>
+<l>    R := sqrt(X * X + Y * Y)</l>
+<l>    if (R &lt;= TrackballSize * 0.70710678)</l>
+<l>        XP := X</l>
+<l>        YP := Y</l>
+<l>        ZP := sqrt(TrackballSize * TrackballSize - R * R)</l>
+<l>    else</l>
+<l>        XP := X</l>
+<l>        YP := Y</l>
+<l>        ZP := 0.5 * TrackballSize * TrackballSize / R</l>
+<l>    endif</l>
+<l>endif</l>
+<l>V := [XP,YP,ZP]</l>
+<l>return ()</l>
+</body>
+<docu id="project_point_on_trackball">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Project an image point onto the trackball</short>
+<short lang="zh_CN">Project an image point onto the trackball</short>
+<parameters>
+<parameter id="TrackballSize"/>
+<parameter id="V"/>
+<parameter id="VirtualTrackball"/>
+<parameter id="X"/>
+<parameter id="Y"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="determine_optimum_viewing_distance">
+<interface>
+<ic>
+<par name="ObjectModel3DID" base_type="ctrl" dimension="0"/>
+<par name="CamParam" base_type="ctrl" dimension="0"/>
+<par name="MinImageSize" base_type="ctrl" dimension="0"/>
+<par name="ImageCoverage" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="Dist" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* Get the 3d bounding box and the center of the 3d model</c>
+<l>get_object_model_3d_params (ObjectModel3DID, 'bounding_box1', BoundingBox)</l>
+<l>get_object_model_3d_params (ObjectModel3DID, 'reference_point', ReferencePoint)</l>
+<c>* </c>
+<c>* Compute the corner points of the bounding box</c>
+<l>P1 := [BoundingBox[0],BoundingBox[1],BoundingBox[2]]</l>
+<l>P2 := [BoundingBox[3],BoundingBox[1],BoundingBox[2]]</l>
+<l>P3 := [BoundingBox[0],BoundingBox[4],BoundingBox[2]]</l>
+<l>P4 := [BoundingBox[0],BoundingBox[1],BoundingBox[5]]</l>
+<l>P5 := [BoundingBox[3],BoundingBox[4],BoundingBox[2]]</l>
+<l>P6 := [BoundingBox[3],BoundingBox[1],BoundingBox[5]]</l>
+<l>P7 := [BoundingBox[0],BoundingBox[4],BoundingBox[5]]</l>
+<l>P8 := [BoundingBox[3],BoundingBox[4],BoundingBox[5]]</l>
+<c>* </c>
+<c>* Compute the maximum distance from the model center to the corners of</c>
+<c>* the bounding box</c>
+<l>D := sum((P1 - ReferencePoint) * (P1 - ReferencePoint))</l>
+<l>D := max([D,sum((P2 - ReferencePoint) * (P2 - ReferencePoint))])</l>
+<l>D := max([D,sum((P3 - ReferencePoint) * (P3 - ReferencePoint))])</l>
+<l>D := max([D,sum((P4 - ReferencePoint) * (P4 - ReferencePoint))])</l>
+<l>D := max([D,sum((P5 - ReferencePoint) * (P5 - ReferencePoint))])</l>
+<l>D := max([D,sum((P6 - ReferencePoint) * (P6 - ReferencePoint))])</l>
+<l>D := max([D,sum((P7 - ReferencePoint) * (P7 - ReferencePoint))])</l>
+<l>D := max([D,sum((P8 - ReferencePoint) * (P8 - ReferencePoint))])</l>
+<c>* </c>
+<c>* Compute the optimum distance to make the projection cover the desired</c>
+<c>* image part.</c>
+<l>get_camera_type_and_parameter_positions (CamParam, CameraType, LenCP, PosF, PosDistortion, PosTilt, PosRot, PosSx, PosSy, PosCx, PosCy, PosWidth, PosHeight, PosVx, PosVy, PosVz)</l>
+<l>MaxProjectionRadius := 0.5 * ImageCoverage * MinImageSize * min([CamParam[PosSx],CamParam[PosSy]])</l>
+<l>Aperture := atan2(MaxProjectionRadius,CamParam[PosF])</l>
+<l>Dist := sqrt(D) / sin(Aperture)</l>
+<l>return ()</l>
+</body>
+<docu id="determine_optimum_viewing_distance">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Determine the optimum viewing distance for a 3d model</short>
+<short lang="zh_CN">Determine the optimum viewing distance for a 3d model</short>
+<parameters>
+<parameter id="CamParam"/>
+<parameter id="Dist"/>
+<parameter id="ImageCoverage"/>
+<parameter id="MinImageSize"/>
+<parameter id="ObjectModel3DID"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="analyze_graph_event_image">
+<interface>
+<io>
+<par name="BackgroundImage" base_type="iconic" dimension="0"/>
+<par name="ModelContours" base_type="iconic" dimension="0"/>
+<par name="TrackballContour" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="Button" base_type="ctrl" dimension="0"/>
+<par name="Row" base_type="ctrl" dimension="0"/>
+<par name="Column" base_type="ctrl" dimension="0"/>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="WindowHandleBuffer" base_type="ctrl" dimension="0"/>
+<par name="OffsetRowIn" base_type="ctrl" dimension="0"/>
+<par name="OffsetColIn" base_type="ctrl" dimension="0"/>
+<par name="ImageNo" base_type="ctrl" dimension="0"/>
+<par name="VisualizeTrackball" base_type="ctrl" dimension="0"/>
+<par name="ModelColor" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="OffsetRowOut" base_type="ctrl" dimension="0"/>
+<par name="OffsetColOut" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>OffsetRowOut := OffsetRowIn</l>
+<l>OffsetColOut := OffsetColIn</l>
+<l>if (ImageNo &lt;= 0)</l>
+<l>    return ()</l>
+<l>endif</l>
+<l>get_window_extents (WindowHandle, Row1, Column1, Width, Height)</l>
+<l>dev_error_var (ErrorVar, 1)</l>
+<l>hom_mat2d_identity (HomMat2DIdentity)</l>
+<l>if (Button == 1)</l>
+<l>    MRow1 := Row</l>
+<l>    MCol1 := Column</l>
+<l>    while (Button == 1)</l>
+<l>        dev_set_check ('~give_error')</l>
+<l>        get_mposition (WindowHandle, Row, Column, Button)</l>
+<l>        Error := ErrorVar</l>
+<l>        dev_set_check ('give_error')</l>
+<l>        if (Error == H_MSG_TRUE)</l>
+<l>            MRow2 := Row</l>
+<l>            MCol2 := Column</l>
+<l>            OffsetRowOut[ImageNo - 1] := OffsetRowOut[ImageNo - 1] + MRow2 - MRow1</l>
+<l>            OffsetColOut[ImageNo - 1] := OffsetColOut[ImageNo - 1] + MCol2 - MCol1</l>
+<l>            set_color (WindowHandleBuffer, ModelColor)</l>
+<l>            if (ImageNo &gt; 0)</l>
+<l>                clear_window (WindowHandleBuffer)</l>
+<l>                hom_mat2d_translate (HomMat2DIdentity, OffsetRowOut[ImageNo - 1], OffsetColOut[ImageNo - 1], HomMat2DTranslate)</l>
+<l>                affine_trans_image (BackgroundImage, BackgroundImageTrans, HomMat2DTranslate, 'constant', 'false')</l>
+<l>                disp_image (BackgroundImageTrans, WindowHandleBuffer)</l>
+<l>                set_tposition (WindowHandleBuffer, 10, 10)</l>
+<l>                write_string (WindowHandleBuffer, 'Image No.: ' + ImageNo$'2d')</l>
+<l>            else</l>
+<l>                set_tposition (WindowHandleBuffer, 10, 10)</l>
+<l>                write_string (WindowHandleBuffer, '(No Background Image)')</l>
+<l>            endif</l>
+<l>            set_tposition (WindowHandleBuffer, 10, Width - 200)</l>
+<l>            write_string (WindowHandleBuffer, 'Mouse Mode: Move Image')</l>
+<l>            disp_xld (ModelContours, WindowHandleBuffer)</l>
+<c>            * Visualize the trackball if desired</c>
+<l>            if (VisualizeTrackball == 'always')</l>
+<l>                set_color (WindowHandleBuffer, 'dim gray')</l>
+<l>                disp_xld (TrackballContour, WindowHandleBuffer)</l>
+<l>            endif</l>
+<l>            copy_rectangle (WindowHandleBuffer, WindowHandle, 0, 0, Height - 1, Width - 1, 0, 0)</l>
+<c>            * </c>
+<l>            MRow1 := MRow2</l>
+<l>            MCol1 := MCol2</l>
+<l>        endif</l>
+<l>    endwhile</l>
+<l>endif</l>
+<l>return ()</l>
+</body>
+<docu id="analyze_graph_event_image">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Reflect the movement of the background image</short>
+<short lang="zh_CN">Reflect the movement of the background image</short>
+<parameters>
+<parameter id="BackgroundImage"/>
+<parameter id="Button"/>
+<parameter id="Column"/>
+<parameter id="ImageNo"/>
+<parameter id="ModelColor"/>
+<parameter id="ModelContours"/>
+<parameter id="OffsetColIn"/>
+<parameter id="OffsetColOut"/>
+<parameter id="OffsetRowIn"/>
+<parameter id="OffsetRowOut"/>
+<parameter id="Row"/>
+<parameter id="TrackballContour"/>
+<parameter id="VisualizeTrackball"/>
+<parameter id="WindowHandle"/>
+<parameter id="WindowHandleBuffer"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="analyze_graph_event_camera">
+<interface>
+<io>
+<par name="BackgroundImage" base_type="iconic" dimension="0"/>
+<par name="TrackballContour" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="Button" base_type="ctrl" dimension="0"/>
+<par name="Row" base_type="ctrl" dimension="0"/>
+<par name="Column" base_type="ctrl" dimension="0"/>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="WindowHandleBuffer" base_type="ctrl" dimension="0"/>
+<par name="VirtualTrackball" base_type="ctrl" dimension="0"/>
+<par name="TrackballSize" base_type="ctrl" dimension="0"/>
+<par name="VisualizeTrackball" base_type="ctrl" dimension="0"/>
+<par name="ObjectModel3DID" base_type="ctrl" dimension="0"/>
+<par name="CamParam" base_type="ctrl" dimension="0"/>
+<par name="HiddenSurfaceRemoval" base_type="ctrl" dimension="0"/>
+<par name="ImageNo" base_type="ctrl" dimension="0"/>
+<par name="ModelColor" base_type="ctrl" dimension="0"/>
+<par name="RefPose" base_type="ctrl" dimension="0"/>
+<par name="MinFaceAngle" base_type="ctrl" dimension="0"/>
+<par name="OffsetRow" base_type="ctrl" dimension="0"/>
+<par name="OffsetCol" base_type="ctrl" dimension="0"/>
+<par name="RelQuaternionIn" base_type="ctrl" dimension="0"/>
+<par name="NumAddIn" base_type="ctrl" dimension="0"/>
+<par name="DistIn" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="RelQuaternionOut" base_type="ctrl" dimension="0"/>
+<par name="NumAddOut" base_type="ctrl" dimension="0"/>
+<par name="DistOut" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>get_camera_type_and_parameter_positions (CamParam, CameraType, LenCP, PosF, PosDistortion, PosTilt, PosRot, PosSx, PosSy, PosCx, PosCy, PosWidth, PosHeight, PosVx, PosVy, PosVz)</l>
+<l>Cx := CamParam[PosCx]</l>
+<l>Cy := CamParam[PosCy]</l>
+<l>Width := CamParam[PosWidth]</l>
+<l>Height := CamParam[PosHeight]</l>
+<l>MinImageSize := min([Width,Height])</l>
+<l>dev_error_var (ErrorVar, 1)</l>
+<l>hom_mat2d_identity (HomMat2DIdentity)</l>
+<l>if (Button == 1)</l>
+<l>    MRow1 := Row</l>
+<l>    MCol1 := Column</l>
+<l>    while (Button == 1)</l>
+<l>        dev_set_check ('~give_error')</l>
+<l>        get_mposition (WindowHandle, Row, Column, Button)</l>
+<l>        Error := ErrorVar</l>
+<l>        dev_set_check ('give_error')</l>
+<l>        if (Error == H_MSG_TRUE)</l>
+<l>            MRow2 := Row</l>
+<l>            MCol2 := Column</l>
+<c>            * Transform the pixel coordinates to relative image coordinates</c>
+<l>            MX1 := (Cx - MCol1) / (0.5 * MinImageSize)</l>
+<l>            MY1 := (Cy - MRow1) / (0.5 * MinImageSize)</l>
+<l>            MX2 := (Cx - MCol2) / (0.5 * MinImageSize)</l>
+<l>            MY2 := (Cy - MRow2) / (0.5 * MinImageSize)</l>
+<c>            * Compute the quaternion rotation that corresponds to the mouse</c>
+<c>            * movement</c>
+<l>            trackball (MX1, MY1, MX2, MY2, VirtualTrackball, TrackballSize, DeltaQuatRotation)</l>
+<c>            * Add the incremental quaternion</c>
+<l>            quat_compose (DeltaQuatRotation, RelQuaternionIn, RelQuaternionIn)</l>
+<l>            NumAddOut := NumAddIn + 1</l>
+<c>            * Normalize the quaternion every 1000 additions</c>
+<l>            if (NumAddOut &gt; 1000)</l>
+<l>                quat_normalize (RelQuaternionIn, RelQuaternionIn)</l>
+<l>                NumAddOut := 0</l>
+<l>            endif</l>
+<c>            * Transform the quaternion to a rotation matrix</c>
+<l>            quat_to_hom_mat3d (RelQuaternionIn, RelHomMat)</l>
+<l>            pose_to_hom_mat3d (RefPose, RefHomMat)</l>
+<l>            hom_mat3d_compose (RelHomMat, RefHomMat, AbsHomMat)</l>
+<l>            hom_mat3d_to_pose (AbsHomMat, AbsPose)</l>
+<l>            AbsPose[2] := AbsPose[2] + DistIn</l>
+<l>            project_object_model_3d (ModelContours, ObjectModel3DID, CamParam, AbsPose, HiddenSurfaceRemoval, MinFaceAngle)</l>
+<c>            * </c>
+<l>            clear_window (WindowHandleBuffer)</l>
+<l>            set_color (WindowHandleBuffer, ModelColor)</l>
+<l>            if (ImageNo &gt; 0)</l>
+<l>                hom_mat2d_translate (HomMat2DIdentity, OffsetRow[ImageNo - 1], OffsetCol[ImageNo - 1], HomMat2DTranslate)</l>
+<l>                affine_trans_image (BackgroundImage, BackgroundImageTrans, HomMat2DTranslate, 'constant', 'false')</l>
+<l>                disp_image (BackgroundImageTrans, WindowHandleBuffer)</l>
+<l>                set_tposition (WindowHandleBuffer, 10, 10)</l>
+<l>                write_string (WindowHandleBuffer, 'Image No.: ' + ImageNo$'2d')</l>
+<l>            else</l>
+<l>                set_tposition (WindowHandleBuffer, 10, 10)</l>
+<l>                write_string (WindowHandleBuffer, '(No Background Image)')</l>
+<l>            endif</l>
+<l>            set_tposition (WindowHandleBuffer, 10, Width - 180)</l>
+<l>            write_string (WindowHandleBuffer, 'Mouse Mode: Move Camera')</l>
+<l>            disp_xld (ModelContours, WindowHandleBuffer)</l>
+<l>            if (VisualizeTrackball == 'always' or VisualizeTrackball == 'on_button')</l>
+<l>                set_color (WindowHandleBuffer, 'dim gray')</l>
+<l>                disp_xld (TrackballContour, WindowHandleBuffer)</l>
+<l>            endif</l>
+<l>            copy_rectangle (WindowHandleBuffer, WindowHandle, 0, 0, Height - 1, Width - 1, 0, 0)</l>
+<c>            * </c>
+<l>            MRow1 := MRow2</l>
+<l>            MCol1 := MCol2</l>
+<l>        endif</l>
+<l>    endwhile</l>
+<l>endif</l>
+<l>if (Button == 4)</l>
+<l>    MRow1 := Row</l>
+<l>    while (Button == 4)</l>
+<l>        dev_set_check ('~give_error')</l>
+<l>        get_mposition (WindowHandle, Row, Column, Button)</l>
+<l>        Error := ErrorVar</l>
+<l>        dev_set_check ('give_error')</l>
+<l>        if (Error == H_MSG_TRUE)</l>
+<l>            MRow2 := Row</l>
+<l>            DRow := MRow2 - MRow1</l>
+<l>            DistIn := DistIn - DistIn * DRow * 0.003</l>
+<l>            quat_to_hom_mat3d (RelQuaternionIn, RelHomMat)</l>
+<l>            pose_to_hom_mat3d (RefPose, RefHomMat)</l>
+<l>            hom_mat3d_compose (RelHomMat, RefHomMat, AbsHomMat)</l>
+<l>            hom_mat3d_to_pose (AbsHomMat, AbsPose)</l>
+<l>            AbsPose[2] := AbsPose[2] + DistIn</l>
+<l>            project_object_model_3d (ModelContours, ObjectModel3DID, CamParam, AbsPose, HiddenSurfaceRemoval, MinFaceAngle)</l>
+<c>            * </c>
+<l>            clear_window (WindowHandleBuffer)</l>
+<l>            set_color (WindowHandleBuffer, ModelColor)</l>
+<l>            if (ImageNo &gt; 0)</l>
+<l>                hom_mat2d_translate (HomMat2DIdentity, OffsetRow[ImageNo - 1], OffsetCol[ImageNo - 1], HomMat2DTranslate)</l>
+<l>                affine_trans_image (BackgroundImage, BackgroundImageTrans, HomMat2DTranslate, 'constant', 'false')</l>
+<l>                disp_image (BackgroundImageTrans, WindowHandleBuffer)</l>
+<l>                set_tposition (WindowHandleBuffer, 10, 10)</l>
+<l>                write_string (WindowHandleBuffer, 'Image No.: ' + ImageNo$'2d')</l>
+<l>            else</l>
+<l>                set_tposition (WindowHandleBuffer, 10, 10)</l>
+<l>                write_string (WindowHandleBuffer, '(No Background Image)')</l>
+<l>            endif</l>
+<l>            set_tposition (WindowHandleBuffer, 10, Width - 180)</l>
+<l>            write_string (WindowHandleBuffer, 'Mouse Mode: Move Camera')</l>
+<l>            disp_xld (ModelContours, WindowHandleBuffer)</l>
+<l>            if (VisualizeTrackball == 'always' or VisualizeTrackball == 'on_button')</l>
+<l>                set_color (WindowHandleBuffer, 'dim gray')</l>
+<l>                disp_xld (TrackballContour, WindowHandleBuffer)</l>
+<l>            endif</l>
+<l>            copy_rectangle (WindowHandleBuffer, WindowHandle, 0, 0, Height - 1, Width - 1, 0, 0)</l>
+<c>            * </c>
+<l>            MRow1 := MRow2</l>
+<l>        endif</l>
+<l>    endwhile</l>
+<l>endif</l>
+<l>DistOut := DistIn</l>
+<l>RelQuaternionOut := RelQuaternionIn</l>
+<l>return ()</l>
+</body>
+<docu id="analyze_graph_event_camera">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Reflect the movement of the camera</short>
+<short lang="zh_CN">Reflect the movement of the camera</short>
+<parameters>
+<parameter id="BackgroundImage"/>
+<parameter id="Button"/>
+<parameter id="CamParam"/>
+<parameter id="Column"/>
+<parameter id="DistIn"/>
+<parameter id="DistOut"/>
+<parameter id="HiddenSurfaceRemoval"/>
+<parameter id="ImageNo"/>
+<parameter id="MinFaceAngle"/>
+<parameter id="ModelColor"/>
+<parameter id="NumAddIn"/>
+<parameter id="NumAddOut"/>
+<parameter id="ObjectModel3DID"/>
+<parameter id="OffsetCol"/>
+<parameter id="OffsetRow"/>
+<parameter id="RefPose"/>
+<parameter id="RelQuaternionIn"/>
+<parameter id="RelQuaternionOut"/>
+<parameter id="Row"/>
+<parameter id="TrackballContour"/>
+<parameter id="TrackballSize"/>
+<parameter id="VirtualTrackball"/>
+<parameter id="VisualizeTrackball"/>
+<parameter id="WindowHandle"/>
+<parameter id="WindowHandleBuffer"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="disp_menu">
+<interface>
+<io>
+<par name="MenuRegions" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="Texts" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>* Display the previously created menu buttons</c>
+<l>count_obj (MenuRegions, NumberRegions)</l>
+<l>NumberTexts := |Texts|</l>
+<l>if (NumberRegions != NumberTexts)</l>
+<l>    stop ()</l>
+<c>    * Wrong number of regions or texts</c>
+<l>endif</l>
+<l>for i := 1 to NumberRegions by 1</l>
+<l>    select_obj (MenuRegions, MenuRegion, i)</l>
+<l>    Text := Texts[i - 1]</l>
+<l>    set_color (WindowHandle, 'light gray')</l>
+<l>    dev_set_window (WindowHandle)</l>
+<l>    dev_set_draw ('fill')</l>
+<l>    dev_set_color ('light gray')</l>
+<l>    disp_region (MenuRegion, WindowHandle)</l>
+<l>    get_region_contour (MenuRegion, Rows, Cols)</l>
+<l>    set_color (WindowHandle, 'dim gray')</l>
+<l>    gen_region_points (RegionBorder, Rows, Cols)</l>
+<l>    disp_region (RegionBorder, WindowHandle)</l>
+<l>    set_color (WindowHandle, 'black')</l>
+<l>    get_string_extents (WindowHandle, Text, Ascent, Descent, Width, Height)</l>
+<l>    set_tposition (WindowHandle, min(Rows) + 1, (max(Cols) + min(Cols)) / 2 - Width / 2)</l>
+<l>    write_string (WindowHandle, Text)</l>
+<l>endfor</l>
+<l>return ()</l>
+</body>
+<docu id="disp_menu">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Displays the menu buttons</short>
+<short lang="zh_CN">Displays the menu buttons</short>
+<parameters>
+<parameter id="MenuRegions"/>
+<parameter id="Texts"/>
+<parameter id="WindowHandle"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="trackball">
+<interface>
+<ic>
+<par name="MX1" base_type="ctrl" dimension="0"/>
+<par name="MY1" base_type="ctrl" dimension="0"/>
+<par name="MX2" base_type="ctrl" dimension="0"/>
+<par name="MY2" base_type="ctrl" dimension="0"/>
+<par name="VirtualTrackball" base_type="ctrl" dimension="0"/>
+<par name="TrackballSize" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="QuatRotation" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>if (MX1 == MX2 and MY1 == MY2)</l>
+<l>    QuatRotation := [1,0,0,0]</l>
+<l>    return ()</l>
+<l>endif</l>
+<c>* Project the image point onto the track ball</c>
+<l>project_point_on_trackball (MX1, MY1, VirtualTrackball, TrackballSize, P1)</l>
+<l>project_point_on_trackball (MX2, MY2, VirtualTrackball, TrackballSize, P2)</l>
+<c>* The cross product of the projected points defines the rotation axis</c>
+<l>tuple_vector_cross_product (P1, P2, RotAxis)</l>
+<c>* Compute the rotation angle</c>
+<l>D := P2 - P1</l>
+<l>T := sqrt(sum(D * D)) / (2.0 * TrackballSize)</l>
+<l>if (T &gt; 1.0)</l>
+<l>    T := 1.0</l>
+<l>endif</l>
+<l>if (T &lt; -1.0)</l>
+<l>    T := -1.0</l>
+<l>endif</l>
+<l>RotAngle := 2.0 * asin(T)</l>
+<l>Len := sqrt(sum(RotAxis * RotAxis))</l>
+<l>if (Len &gt; 0.)</l>
+<l>    LenInv := 1. / Len</l>
+<l>    RotAxis := RotAxis * LenInv</l>
+<l>endif</l>
+<l>axis_angle_to_quat (RotAxis[0], RotAxis[1], RotAxis[2], RotAngle, QuatRotation)</l>
+<l>return ()</l>
+</body>
+<docu id="trackball">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Compute the 3d rotation from the mose movement</short>
+<short lang="zh_CN">Compute the 3d rotation from the mose movement</short>
+<parameters>
+<parameter id="MX1"/>
+<parameter id="MX2"/>
+<parameter id="MY1"/>
+<parameter id="MY2"/>
+<parameter id="QuatRotation"/>
+<parameter id="TrackballSize"/>
+<parameter id="VirtualTrackball"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="gen_arrow_cont">
+<interface>
+<oo>
+<par name="Arrow" base_type="iconic" dimension="0"/>
+</oo>
+<ic>
+<par name="Row1" base_type="ctrl" dimension="0"/>
+<par name="Column1" base_type="ctrl" dimension="0"/>
+<par name="Row2" base_type="ctrl" dimension="0"/>
+<par name="Column2" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>* Generate a contour in form of a arrow</c>
+<l>Length := 7</l>
+<l>Angle := 40</l>
+<l>MinArrowLength := 2</l>
+<l>DRow := Row2 - Row1</l>
+<l>DCol := Column2 - Column1</l>
+<l>ArrowLength := sqrt(DRow * DRow + DCol * DCol)</l>
+<l>if (ArrowLength &lt; MinArrowLength)</l>
+<l>    Length := 0</l>
+<l>endif</l>
+<l>tuple_atan2 (DRow, -DCol, Phi)</l>
+<l>P1R := Row2 - Length * sin(Phi - rad(Angle))</l>
+<l>P1C := Column2 + Length * cos(Phi - rad(Angle))</l>
+<l>P2R := Row2 - Length * sin(Phi + rad(Angle))</l>
+<l>P2C := Column2 + Length * cos(Phi + rad(Angle))</l>
+<l>gen_cross_contour_xld (Cross1, Row1, Column1, 6, 0.785398)</l>
+<l>gen_cross_contour_xld (Cross2, Row2, Column2, 6, 0.785398)</l>
+<l>gen_cross_contour_xld (CrossP1, P1R, P1C, 6, 0.785398)</l>
+<l>gen_cross_contour_xld (CrossP2, P2R, P2C, 6, 0.785398)</l>
+<l>gen_contour_polygon_xld (Arrow, [Row1,Row2,P1R,Row2,P2R], [Column1,Column2,P1C,Column2,P2C])</l>
+<l>return ()</l>
+</body>
+<docu id="gen_arrow_cont">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Generate a contour in form of an arrow</short>
+<short lang="zh_CN">Generate a contour in form of an arrow</short>
+<parameters>
+<parameter id="Arrow"/>
+<parameter id="Column1"/>
+<parameter id="Column2"/>
+<parameter id="Row1"/>
+<parameter id="Row2"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="update_pose_information">
+<interface>
+<ic>
+<par name="WindowHandle" base_type="ctrl" dimension="0"/>
+<par name="ObjectModel3DID" base_type="ctrl" dimension="0"/>
+<par name="CamParam" base_type="ctrl" dimension="0"/>
+<par name="RefPose" base_type="ctrl" dimension="0"/>
+<par name="RelQuaternion" base_type="ctrl" dimension="0"/>
+<par name="Dist" base_type="ctrl" dimension="0"/>
+<par name="LatitudeMin" base_type="ctrl" dimension="0"/>
+<par name="LatitudeMax" base_type="ctrl" dimension="0"/>
+<par name="LongitudeMin" base_type="ctrl" dimension="0"/>
+<par name="LongitudeMax" base_type="ctrl" dimension="0"/>
+<par name="CamRollMin" base_type="ctrl" dimension="0"/>
+<par name="CamRollMax" base_type="ctrl" dimension="0"/>
+<par name="DistMin" base_type="ctrl" dimension="0"/>
+<par name="DistMax" base_type="ctrl" dimension="0"/>
+<par name="MinFaceAngle" base_type="ctrl" dimension="0"/>
+<par name="HiddenSurfaceRemoval" base_type="ctrl" dimension="0"/>
+<par name="ModelColor" base_type="ctrl" dimension="0"/>
+</ic>
+</interface>
+<body>
+<c>* </c>
+<c>* Initialize some values</c>
+<l>CoordAxesLength := 50</l>
+<l>get_window_extents (WindowHandle, Row, Column, Width, Height)</l>
+<l>gen_image_const (Image1, 'byte', Width, Height)</l>
+<l>gen_image_const (Image2, 'byte', Width, Height)</l>
+<l>gen_image_const (Image3, 'byte', Width, Height)</l>
+<l>MinImageSize := min([Width,Height])</l>
+<l>get_camera_type_and_parameter_positions (CamParam, CameraType, LenCP, PosF, PosDistortion, PosTilt, PosRot, PosSx, PosSy, PosCx, PosCy, PosWidth, PosHeight, PosVx, PosVy, PosVz)</l>
+<l>Cx := MinImageSize / 2</l>
+<l>Cy := MinImageSize / 2</l>
+<l>CamParamSmall := CamParam</l>
+<l>CamParamSmall[PosCx] := Cx</l>
+<l>CamParamSmall[PosCy] := Cy</l>
+<l>CamParamSmall[PosWidth] := MinImageSize</l>
+<l>CamParamSmall[PosHeight] := MinImageSize</l>
+<l>SphereRadius := MinImageSize * 0.8 / 2</l>
+<l>SpherePos := MinImageSize / 2</l>
+<c>* </c>
+<c>* Project the viewing sphere</c>
+<l>gen_contour_polygon_xld (CirclesLon, [SpherePos - SphereRadius,SpherePos + SphereRadius], [SpherePos,SpherePos])</l>
+<l>for Lon := 30 to 90 by 30</l>
+<l>    gen_ellipse_contour_xld (CircleLon, SpherePos, SpherePos, 0, SphereRadius * sin(rad(Lon)), SphereRadius, 0, 6.28318, 'positive', 1.5)</l>
+<l>    concat_obj (CirclesLon, CircleLon, CirclesLon)</l>
+<l>endfor</l>
+<l>gen_empty_obj (CirclesLat)</l>
+<l>for Lat := -60 to 60 by 30</l>
+<l>    gen_contour_polygon_xld (CircleLat, [SpherePos - SphereRadius * sin(rad(Lat)),SpherePos - SphereRadius * sin(rad(Lat))], [SpherePos - SphereRadius * sin(rad(90. - Lat)),SpherePos + SphereRadius * sin(rad(90. - Lat))])</l>
+<l>    concat_obj (CirclesLat, CircleLat, CirclesLat)</l>
+<l>endfor</l>
+<c>* </c>
+<c>* Project the camera position</c>
+<l>quat_to_hom_mat3d (RelQuaternion, RelHomMat)</l>
+<l>hom_mat3d_to_pose (RelHomMat, RelPose)</l>
+<l>RelPose[2] := Dist</l>
+<l>pose_to_hom_mat3d (RelPose, RelHomMat)</l>
+<l>hom_mat3d_invert (RelHomMat, RelHomMatInv)</l>
+<l>affine_trans_point_3d (RelHomMatInv, 0, 0, 0, X, Y, Z)</l>
+<l>CamPos := [X,Y,Z]</l>
+<l>affine_trans_point_3d (RelHomMatInv, 1., 0, 0, X, Y, Z)</l>
+<l>CamXAx := [X,Y,Z]</l>
+<l>affine_trans_point_3d (RelHomMatInv, 0, 1., 0, X, Y, Z)</l>
+<l>CamYAx := [X,Y,Z]</l>
+<l>affine_trans_point_3d (RelHomMatInv, 0, 0, 1., X, Y, Z)</l>
+<l>CamZAx := [X,Y,Z]</l>
+<c>* Scale the position to the viewing sphere</c>
+<l>ScaleFactor := SphereRadius / sqrt(sum(CamPos * CamPos))</l>
+<l>CamPosProj := ScaleFactor * CamPos</l>
+<l>CamXAxProj := ScaleFactor * CamXAx</l>
+<l>CamYAxProj := ScaleFactor * CamYAx</l>
+<l>CamZAxProj := ScaleFactor * CamZAx</l>
+<c>* Scale the coordinate axis to the desired length</c>
+<l>Vec := CamXAxProj - CamPosProj</l>
+<l>ScaleFactor := CoordAxesLength / sqrt(sum(Vec * Vec))</l>
+<l>CamXAxProj := CamPosProj + ScaleFactor * (CamXAxProj - CamPosProj)</l>
+<l>CamYAxProj := CamPosProj + ScaleFactor * (CamYAxProj - CamPosProj)</l>
+<l>CamZAxProj := CamPosProj + ScaleFactor * (CamZAxProj - CamPosProj)</l>
+<l>CamRow := SpherePos + CamPosProj[1]</l>
+<l>CamCol := SpherePos + CamPosProj[0]</l>
+<l>CamXAxRow := SpherePos + CamXAxProj[1]</l>
+<l>CamXAxCol := SpherePos + CamXAxProj[0]</l>
+<l>CamYAxRow := SpherePos + CamYAxProj[1]</l>
+<l>CamYAxCol := SpherePos + CamYAxProj[0]</l>
+<l>CamZAxRow := SpherePos + CamZAxProj[1]</l>
+<l>CamZAxCol := SpherePos + CamZAxProj[0]</l>
+<l>gen_arrow_cont (XAxis, CamRow, CamCol, CamXAxRow, CamXAxCol)</l>
+<l>gen_arrow_cont (YAxis, CamRow, CamCol, CamYAxRow, CamYAxCol)</l>
+<l>gen_arrow_cont (ZAxis, CamRow, CamCol, CamZAxRow, CamZAxCol)</l>
+<c>* </c>
+<c>* Compute the current longitude, latitude, and camera roll angle</c>
+<l>convert_point_3d_cart_to_spher (CamPos[0], CamPos[1], CamPos[2], '-y', '-z', CamLon, CamLat, Radius)</l>
+<l>CamRoll := -RelPose[5]</l>
+<l>while (CamRoll &gt; 180.0)</l>
+<l>    CamRoll := CamRoll - 360.0</l>
+<l>endwhile</l>
+<l>while (CamRoll &lt; -180.0)</l>
+<l>    CamRoll := CamRoll + 360.0</l>
+<l>endwhile</l>
+<l>CamRoll := CamRoll * 3.1416 / 180.</l>
+<c>* </c>
+<c>* Indicate longitude and latitude by lines</c>
+<l>gen_contour_polygon_xld (LineLong, [SpherePos,SpherePos], [SpherePos,SpherePos + SphereRadius * sin(CamLon)])</l>
+<l>XRangeCamPos := []</l>
+<l>YRangeCamPos := []</l>
+<l>StepLat := rad(1)</l>
+<l>if (CamLat &gt; 0)</l>
+<l>    StepLat := rad(1)</l>
+<l>else</l>
+<l>    StepLat := -rad(1)</l>
+<l>endif</l>
+<l>for Lat := 0 to CamLat by StepLat</l>
+<l>    convert_point_3d_spher_to_cart (CamLon, Lat, SphereRadius, '-y', '-z', X, Y, Z)</l>
+<l>    XRangeCamPos := [XRangeCamPos,X]</l>
+<l>    YRangeCamPos := [YRangeCamPos,Y]</l>
+<l>endfor</l>
+<l>gen_contour_polygon_xld (LineLat, SpherePos + YRangeCamPos, SpherePos + XRangeCamPos)</l>
+<c>* </c>
+<c>* Project the model using the reference pose</c>
+<l>determine_optimum_viewing_distance (ObjectModel3DID, CamParamSmall, MinImageSize, 0.7, ViewingDist)</l>
+<l>RefPose[2] := RefPose[2] + ViewingDist</l>
+<l>project_object_model_3d (ModelContours, ObjectModel3DID, CamParamSmall, RefPose, HiddenSurfaceRemoval, MinFaceAngle)</l>
+<l>gen_cross_contour_xld (ReferencePointCross, Cy, Cx, 6, 0)</l>
+<c>* </c>
+<c>* The pose range can only be displayed from -90° to +90°</c>
+<l>LongitudeMinDisp := max([LongitudeMin,-rad(90)])</l>
+<l>LongitudeMaxDisp := min([LongitudeMax,rad(90)])</l>
+<l>LatitudeMinDisp := max([LatitudeMin,-rad(90)])</l>
+<l>LatitudeMaxDisp := min([LatitudeMax,rad(90)])</l>
+<c>* </c>
+<c>* Project the border of the pose range at LatituteMin and LatitudeMax</c>
+<l>XRangeLatMin := []</l>
+<l>YRangeLatMin := []</l>
+<l>XRangeLatMax := []</l>
+<l>YRangeLatMax := []</l>
+<l>for Long := LongitudeMinDisp to LongitudeMaxDisp by rad(1)</l>
+<l>    convert_point_3d_spher_to_cart (Long, LatitudeMinDisp, SphereRadius, '-y', '-z', X, Y, Z)</l>
+<l>    XRangeLatMin := [XRangeLatMin,X]</l>
+<l>    YRangeLatMin := [YRangeLatMin,Y]</l>
+<l>    convert_point_3d_spher_to_cart (Long, LatitudeMaxDisp, SphereRadius, '-y', '-z', X, Y, Z)</l>
+<l>    XRangeLatMax := [XRangeLatMax,X]</l>
+<l>    YRangeLatMax := [YRangeLatMax,Y]</l>
+<l>endfor</l>
+<c>* </c>
+<c>* Project the border of the pose range at LongitudeMin and LongitudeMax</c>
+<l>XRangeLongMin := []</l>
+<l>YRangeLongMin := []</l>
+<l>XRangeLongMax := []</l>
+<l>YRangeLongMax := []</l>
+<l>for Lat := LatitudeMinDisp to LatitudeMaxDisp by rad(1)</l>
+<l>    convert_point_3d_spher_to_cart (LongitudeMinDisp, Lat, SphereRadius, '-y', '-z', X, Y, Z)</l>
+<l>    XRangeLongMin := [XRangeLongMin,X]</l>
+<l>    YRangeLongMin := [YRangeLongMin,Y]</l>
+<l>    convert_point_3d_spher_to_cart (LongitudeMaxDisp, Lat, SphereRadius, '-y', '-z', X, Y, Z)</l>
+<l>    XRangeLongMax := [XRangeLongMax,X]</l>
+<l>    YRangeLongMax := [YRangeLongMax,Y]</l>
+<l>endfor</l>
+<l>gen_contour_polygon_xld (ContPoseRange, SpherePos + [YRangeLatMin,YRangeLongMax,inverse(YRangeLatMax),inverse(YRangeLongMin)], SpherePos + [XRangeLatMin,XRangeLongMax,inverse(XRangeLatMax),inverse(XRangeLongMin)])</l>
+<l>compose3 (Image1, Image2, Image3, Image)</l>
+<l>paint_xld (ContPoseRange, Image, Image, [80,0,80])</l>
+<c>* </c>
+<c>* Display the graphics</c>
+<l>dev_set_window (WindowHandle)</l>
+<l>dev_display (Image)</l>
+<l>dev_set_color ('blue')</l>
+<l>dev_display (CirclesLon)</l>
+<l>dev_display (CirclesLat)</l>
+<l>dev_set_color (ModelColor)</l>
+<l>dev_display (ModelContours)</l>
+<l>dev_set_color ('light gray')</l>
+<l>dev_display (ReferencePointCross)</l>
+<l>dev_set_color ('magenta')</l>
+<l>dev_display (ContPoseRange)</l>
+<l>if (CamLon &gt; -rad(90) and CamLon &lt; rad(90))</l>
+<l>    dev_set_color ('yellow')</l>
+<l>else</l>
+<l>    dev_set_color ('tan')</l>
+<l>endif</l>
+<l>dev_display (XAxis)</l>
+<l>dev_display (YAxis)</l>
+<l>dev_display (ZAxis)</l>
+<l>set_tposition (WindowHandle, CamXAxRow, CamXAxCol)</l>
+<l>write_string (WindowHandle, 'x')</l>
+<l>set_tposition (WindowHandle, CamYAxRow, CamYAxCol)</l>
+<l>write_string (WindowHandle, 'y')</l>
+<l>set_tposition (WindowHandle, CamZAxRow, CamZAxCol)</l>
+<l>write_string (WindowHandle, 'z')</l>
+<l>get_line_style (WindowHandle, LineStyle)</l>
+<l>set_line_style (WindowHandle, [4,4])</l>
+<l>dev_display (LineLong)</l>
+<l>dev_display (LineLat)</l>
+<l>set_line_style (WindowHandle, LineStyle)</l>
+<c>* </c>
+<c>* Display the text</c>
+<c>* Compute the format string in dependence of the distance magnitude</c>
+<l>MaxDist := max([Dist,DistMin,DistMax])</l>
+<l>if (MaxDist &gt; 0)</l>
+<l>    Precision := max([0,4 - int(log10(MaxDist))])</l>
+<l>    Precision := min([Precision,4])</l>
+<l>else</l>
+<l>    Precision := 4</l>
+<l>endif</l>
+<l>DistFormat := '6.' + Precision + 'f'</l>
+<l>dev_set_color ('white')</l>
+<l>tuple_chr (0xb0, DegreeSign)</l>
+<l>set_tposition (WindowHandle, MinImageSize, 30)</l>
+<l>write_string (WindowHandle, 'Current Reference Pose Angles:')</l>
+<l>set_tposition (WindowHandle, MinImageSize + 20, 30)</l>
+<l>write_string (WindowHandle, '   a =' + RefPose[3]$'4.0f' + DegreeSign + ';' + ' b =' + RefPose[4]$'4.0f' + DegreeSign + ';' + ' g =' + RefPose[5]$'4.0f' + DegreeSign)</l>
+<l>set_tposition (WindowHandle, MinImageSize + 50, 30)</l>
+<l>write_string (WindowHandle, 'Longitude: ' + (CamLon * 180 / 3.1416)$'+4.0f' + DegreeSign + '; [' + (LongitudeMin * 180 / 3.1416)$'+4.0f' + DegreeSign + '; ' + (LongitudeMax * 180 / 3.1416)$'+4.0f' + DegreeSign + ']')</l>
+<l>set_tposition (WindowHandle, MinImageSize + 70, 30)</l>
+<l>write_string (WindowHandle, 'Latitude:  ' + (CamLat * 180 / 3.1416)$'+4.0f' + DegreeSign + '; [' + (LatitudeMin * 180 / 3.1416)$'+4.0f' + DegreeSign + '; ' + (LatitudeMax * 180 / 3.1416)$'+4.0f' + DegreeSign + ']')</l>
+<l>set_tposition (WindowHandle, MinImageSize + 90, 30)</l>
+<l>write_string (WindowHandle, 'CamRoll:   ' + (CamRoll * 180 / 3.1416)$'+4.0f' + DegreeSign + '; [' + (CamRollMin * 180 / 3.1416)$'+4.0f' + DegreeSign + '; ' + (CamRollMax * 180 / 3.1416)$'+4.0f' + DegreeSign + ']')</l>
+<l>set_tposition (WindowHandle, MinImageSize + 110, 30)</l>
+<l>write_string (WindowHandle, 'Distance: ' + Dist$DistFormat + '; [' + DistMin$DistFormat + '; ' + DistMax$DistFormat + ']')</l>
+<l>set_tposition (WindowHandle, MinImageSize + 140, 30)</l>
+<l>write_string (WindowHandle, 'MinFaceAngle: ' + (MinFaceAngle * 180 / 3.1416)$'4.0f' + DegreeSign)</l>
+<l>return ()</l>
+</body>
+<docu id="update_pose_information">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Visualize the pose information of a 3d model</short>
+<short lang="zh_CN">Visualize the pose information of a 3d model</short>
+<parameters>
+<parameter id="CamParam"/>
+<parameter id="CamRollMax"/>
+<parameter id="CamRollMin"/>
+<parameter id="Dist"/>
+<parameter id="DistMax"/>
+<parameter id="DistMin"/>
+<parameter id="HiddenSurfaceRemoval"/>
+<parameter id="LatitudeMax"/>
+<parameter id="LatitudeMin"/>
+<parameter id="LongitudeMax"/>
+<parameter id="LongitudeMin"/>
+<parameter id="MinFaceAngle"/>
+<parameter id="ModelColor"/>
+<parameter id="ObjectModel3DID"/>
+<parameter id="RefPose"/>
+<parameter id="RelQuaternion"/>
+<parameter id="WindowHandle"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="analyze_menu_event">
+<interface>
+<io>
+<par name="MenuRegions" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="MenuText" base_type="ctrl" dimension="0"/>
+<par name="WindowHandleMenu" base_type="ctrl" dimension="0"/>
+<par name="Row" base_type="ctrl" dimension="0"/>
+<par name="Col" base_type="ctrl" dimension="0"/>
+<par name="LongitudeMinIn" base_type="ctrl" dimension="0"/>
+<par name="LongitudeMaxIn" base_type="ctrl" dimension="0"/>
+<par name="LatitudeMinIn" base_type="ctrl" dimension="0"/>
+<par name="LatitudeMaxIn" base_type="ctrl" dimension="0"/>
+<par name="CamRollMinIn" base_type="ctrl" dimension="0"/>
+<par name="CamRollMaxIn" base_type="ctrl" dimension="0"/>
+<par name="DistMinIn" base_type="ctrl" dimension="0"/>
+<par name="DistMaxIn" base_type="ctrl" dimension="0"/>
+<par name="MinFaceAngleIn" base_type="ctrl" dimension="0"/>
+<par name="RefPoseIn" base_type="ctrl" dimension="0"/>
+<par name="RelQuaternionIn" base_type="ctrl" dimension="0"/>
+<par name="ImageNoIn" base_type="ctrl" dimension="0"/>
+<par name="HiddenSurfaceRemovalIn" base_type="ctrl" dimension="0"/>
+<par name="MouseModeIn" base_type="ctrl" dimension="0"/>
+<par name="Dist" base_type="ctrl" dimension="0"/>
+<par name="ObjectModel3DID" base_type="ctrl" dimension="0"/>
+<par name="RefPoseReset" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="SelectedButton" base_type="ctrl" dimension="0"/>
+<par name="Exit" base_type="ctrl" dimension="0"/>
+<par name="LongitudeMinOut" base_type="ctrl" dimension="0"/>
+<par name="LongitudeMaxOut" base_type="ctrl" dimension="0"/>
+<par name="LatitudeMinOut" base_type="ctrl" dimension="0"/>
+<par name="LatitudeMaxOut" base_type="ctrl" dimension="0"/>
+<par name="CamRollMinOut" base_type="ctrl" dimension="0"/>
+<par name="CamRollMaxOut" base_type="ctrl" dimension="0"/>
+<par name="DistMinOut" base_type="ctrl" dimension="0"/>
+<par name="DistMaxOut" base_type="ctrl" dimension="0"/>
+<par name="MinFaceAngleOut" base_type="ctrl" dimension="0"/>
+<par name="RefPoseOut" base_type="ctrl" dimension="0"/>
+<par name="RelQuaternionOut" base_type="ctrl" dimension="0"/>
+<par name="ImageNoOut" base_type="ctrl" dimension="0"/>
+<par name="HiddenSurfaceRemovalOut" base_type="ctrl" dimension="0"/>
+<par name="MouseModeOut" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<l>Exit := false</l>
+<l>get_selected_button (MenuRegions, MenuText, WindowHandleMenu, Row, Col, SelectedButton)</l>
+<l>if (SelectedButton == 'Exit')</l>
+<l>    Exit := true</l>
+<l>endif</l>
+<c>* </c>
+<c>* Copy the input parameters to the output parameters</c>
+<l>LongitudeMinOut := LongitudeMinIn</l>
+<l>LongitudeMaxOut := LongitudeMaxIn</l>
+<l>LatitudeMinOut := LatitudeMinIn</l>
+<l>LatitudeMaxOut := LatitudeMaxIn</l>
+<l>CamRollMinOut := CamRollMinIn</l>
+<l>CamRollMaxOut := CamRollMaxIn</l>
+<l>DistMinOut := DistMinIn</l>
+<l>DistMaxOut := DistMaxIn</l>
+<l>MinFaceAngleOut := MinFaceAngleIn</l>
+<l>RefPoseOut := RefPoseIn</l>
+<l>RelQuaternionOut := RelQuaternionIn</l>
+<l>ImageNoOut := ImageNoIn</l>
+<l>HiddenSurfaceRemovalOut := HiddenSurfaceRemovalIn</l>
+<l>MouseModeOut := MouseModeIn</l>
+<c>* </c>
+<c>* Check which menu button was pressed.</c>
+<l>if (SelectedButton == 'Set Reference Pose')</l>
+<l>    pose_to_hom_mat3d (RefPoseOut, RefHomMat)</l>
+<l>    quat_to_hom_mat3d (RelQuaternionOut, RelHomMat)</l>
+<l>    hom_mat3d_compose (RelHomMat, RefHomMat, AbsHomMat)</l>
+<l>    hom_mat3d_to_pose (AbsHomMat, RefPoseOut)</l>
+<l>    RelQuaternionOut := [1,0,0,0]</l>
+<l>endif</l>
+<l>if (SelectedButton == 'Add to Pose Range')</l>
+<l>    quat_to_hom_mat3d (RelQuaternionIn, RelHomMat)</l>
+<l>    hom_mat3d_to_pose (RelHomMat, RelPose)</l>
+<l>    RelPose[2] := Dist</l>
+<l>    pose_invert (RelPose, RelPoseInv)</l>
+<l>    CameraPos := [RelPoseInv[0],RelPoseInv[1],RelPoseInv[2]]</l>
+<c>    * Compute the current longitude, latitude, and camera roll angle</c>
+<l>    convert_point_3d_cart_to_spher (CameraPos[0], CameraPos[1], CameraPos[2], '-y', '-z', CurrentLongitude, CurrentLatitude, Radius)</l>
+<l>    CurrentCamRoll := RelPose[5]</l>
+<l>    while (CurrentCamRoll &gt; 180.0)</l>
+<l>        CurrentCamRoll := CurrentCamRoll - 360.0</l>
+<l>    endwhile</l>
+<l>    while (CurrentCamRoll &lt; -180.0)</l>
+<l>        CurrentCamRoll := CurrentCamRoll + 360.0</l>
+<l>    endwhile</l>
+<l>    CurrentCamRoll := CurrentCamRoll * 3.1416 / 180.</l>
+<l>    LongitudeMinOut := min([LongitudeMinOut,CurrentLongitude])</l>
+<l>    LongitudeMaxOut := max([LongitudeMaxOut,CurrentLongitude])</l>
+<l>    LatitudeMinOut := min([LatitudeMinOut,CurrentLatitude])</l>
+<l>    LatitudeMaxOut := max([LatitudeMaxOut,CurrentLatitude])</l>
+<l>    CamRollMinOut := min([CamRollMinOut,CurrentCamRoll])</l>
+<l>    CamRollMaxOut := max([CamRollMaxOut,CurrentCamRoll])</l>
+<l>    DistMinOut := min([DistMinOut,Dist])</l>
+<l>    DistMaxOut := max([DistMaxOut,Dist])</l>
+<l>endif</l>
+<l>if (SelectedButton == 'Increase MinFaceAngle')</l>
+<l>    MinFaceAngleOut := MinFaceAngleOut + rad(1)</l>
+<l>    if (MinFaceAngleOut &gt; rad(180))</l>
+<l>        MinFaceAngleOut := rad(180)</l>
+<l>    endif</l>
+<l>endif</l>
+<l>if (SelectedButton == 'Decrease MinFaceAngle')</l>
+<l>    MinFaceAngleOut := MinFaceAngleOut - rad(1)</l>
+<l>    if (MinFaceAngleOut &lt; 0)</l>
+<l>        MinFaceAngleOut := 0</l>
+<l>    endif</l>
+<l>endif</l>
+<l>if (SelectedButton == 'Reset Reference Pose')</l>
+<c>    * Reset the reference pose</c>
+<l>    RefPoseOut := RefPoseReset</l>
+<c>    * Reset the pose range</c>
+<l>    LongitudeMinOut := 0</l>
+<l>    LongitudeMaxOut := 0</l>
+<l>    LatitudeMinOut := 0</l>
+<l>    LatitudeMaxOut := 0</l>
+<l>    CamRollMinOut := 0</l>
+<l>    CamRollMaxOut := 0</l>
+<l>    DistMinOut := Dist</l>
+<l>    DistMaxOut := Dist</l>
+<c>    * Reset the current relative pose</c>
+<l>    RelQuaternionOut := [1,0,0,0]</l>
+<l>endif</l>
+<l>if (SelectedButton == 'Reset Pose Range')</l>
+<l>    LongitudeMinOut := 0</l>
+<l>    LongitudeMaxOut := 0</l>
+<l>    LatitudeMinOut := 0</l>
+<l>    LatitudeMaxOut := 0</l>
+<l>    CamRollMinOut := 0</l>
+<l>    CamRollMaxOut := 0</l>
+<l>    DistMinOut := Dist</l>
+<l>    DistMaxOut := Dist</l>
+<l>endif</l>
+<l>if (SelectedButton == 'Next Image')</l>
+<l>    ImageNoOut := ImageNoIn + 1</l>
+<l>endif</l>
+<l>if (SelectedButton == 'Previous Image')</l>
+<l>    ImageNoOut := ImageNoIn - 1</l>
+<l>endif</l>
+<l>if (SelectedButton == 'Hidden Line Removal')</l>
+<l>    if (HiddenSurfaceRemovalIn == 'true')</l>
+<l>        HiddenSurfaceRemovalOut := 'false'</l>
+<l>    else</l>
+<l>        HiddenSurfaceRemovalOut := 'true'</l>
+<l>    endif</l>
+<l>endif</l>
+<l>if (SelectedButton == 'Mouse Mode: Move Camera')</l>
+<l>    MouseModeOut := 'move_camera'</l>
+<l>endif</l>
+<l>if (SelectedButton == 'Mouse Mode: Move Image')</l>
+<l>    MouseModeOut := 'move_image'</l>
+<l>endif</l>
+<l>return ()</l>
+</body>
+<docu id="analyze_menu_event">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Reflect the selection of a menu button</short>
+<short lang="zh_CN">Reflect the selection of a menu button</short>
+<parameters>
+<parameter id="CamRollMaxIn"/>
+<parameter id="CamRollMaxOut"/>
+<parameter id="CamRollMinIn"/>
+<parameter id="CamRollMinOut"/>
+<parameter id="Col"/>
+<parameter id="Dist"/>
+<parameter id="DistMaxIn"/>
+<parameter id="DistMaxOut"/>
+<parameter id="DistMinIn"/>
+<parameter id="DistMinOut"/>
+<parameter id="Exit"/>
+<parameter id="HiddenSurfaceRemovalIn"/>
+<parameter id="HiddenSurfaceRemovalOut"/>
+<parameter id="ImageNoIn"/>
+<parameter id="ImageNoOut"/>
+<parameter id="LatitudeMaxIn"/>
+<parameter id="LatitudeMaxOut"/>
+<parameter id="LatitudeMinIn"/>
+<parameter id="LatitudeMinOut"/>
+<parameter id="LongitudeMaxIn"/>
+<parameter id="LongitudeMaxOut"/>
+<parameter id="LongitudeMinIn"/>
+<parameter id="LongitudeMinOut"/>
+<parameter id="MenuRegions"/>
+<parameter id="MenuText"/>
+<parameter id="MinFaceAngleIn"/>
+<parameter id="MinFaceAngleOut"/>
+<parameter id="MouseModeIn"/>
+<parameter id="MouseModeOut"/>
+<parameter id="ObjectModel3DID"/>
+<parameter id="RefPoseIn"/>
+<parameter id="RefPoseOut"/>
+<parameter id="RefPoseReset"/>
+<parameter id="RelQuaternionIn"/>
+<parameter id="RelQuaternionOut"/>
+<parameter id="Row"/>
+<parameter id="SelectedButton"/>
+<parameter id="WindowHandleMenu"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="tuple_vector_cross_product">
+<interface>
+<ic>
+<par name="V1" base_type="ctrl" dimension="0"/>
+<par name="V2" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="VC" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* The caller must ensure that the length of both input vectors is 3</c>
+<l>VC := V1[1] * V2[2] - V1[2] * V2[1]</l>
+<l>VC := [VC,V1[2] * V2[0] - V1[0] * V2[2]]</l>
+<l>VC := [VC,V1[0] * V2[1] - V1[1] * V2[0]]</l>
+<l>return ()</l>
+</body>
+<docu id="tuple_vector_cross_product">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Compute the vector cross product</short>
+<short lang="zh_CN">Compute the vector cross product</short>
+<parameters>
+<parameter id="V1"/>
+<parameter id="V2"/>
+<parameter id="VC"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="inspect_object_model_3d">
+<interface>
+<io>
+<par name="BackgroundImages" base_type="iconic" dimension="0"/>
+</io>
+<ic>
+<par name="ObjectModel3DID" base_type="ctrl" dimension="0"/>
+<par name="CamParam" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="RefRotX" base_type="ctrl" dimension="0"/>
+<par name="RefRotY" base_type="ctrl" dimension="0"/>
+<par name="RefRotZ" base_type="ctrl" dimension="0"/>
+<par name="LongitudeMin" base_type="ctrl" dimension="0"/>
+<par name="LongitudeMax" base_type="ctrl" dimension="0"/>
+<par name="LatitudeMin" base_type="ctrl" dimension="0"/>
+<par name="LatitudeMax" base_type="ctrl" dimension="0"/>
+<par name="CamRollMin" base_type="ctrl" dimension="0"/>
+<par name="CamRollMax" base_type="ctrl" dimension="0"/>
+<par name="DistMin" base_type="ctrl" dimension="0"/>
+<par name="DistMax" base_type="ctrl" dimension="0"/>
+<par name="MinFaceAngle" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* The procedure inspect_object_mode_3d can be used to visualize a 3d object</c>
+<c>* model. If the 3d object model is used to create a 3d shape mode,</c>
+<c>* inspect_object_model_3d can also be used to find the right values for the</c>
+<c>* input control parameters of create_shape_model_3d. The usage is briefly</c>
+<c>* described in the following:</c>
+<c>* </c>
+<c>* Three windows are opened to interact with the user. The upper left window</c>
+<c>* shows the current camera view of the 3d object model. If desired, one of</c>
+<c>* several background images can be additionally visualized. In this case, the</c>
+<c>* background images must be passed in the input object parameter</c>
+<c>* BackgroundImages as a tuple. If no background images are available an empty</c>
+<c>* tuple must be passed instead. The number of the currently displayed</c>
+<c>* background image is displayed in the upper left image corner.</c>
+<c>* If the current mouse mode, which is displayed in the upper right image corner, is</c>
+<c>* set to 'Move Camera' the mouse can be used to change the current camera</c>
+<c>* view. The position of the camera on a virtual sphere around the 3d object model</c>
+<c>* can be changed by moving the mouse while holding the left mouse</c>
+<c>* pressed. For this, a virtual trackball (displayed as a gray circle) indicates around</c>
+<c>* which axis the camera should be rotated. If the mouse is inside the circle the</c>
+<c>*  camera is rotated around the x and y axis, while otherwise the rotation is</c>
+<c>* performed around the z axis. The distance between the 3d object model and the</c>
+<c>* camera can be changed by moving the mouse in vertical direction while holding</c>
+<c>* the right  button pressed.</c>
+<c>* If the current mouse mode is set to 'Move Image', the background image can be</c>
+<c>* moved by using the left mouse button. This is useful, for example, to make an</c>
+<c>* image of the 3d object model coincide with the current camera view. Note that</c>
+<c>* by moving the image an artificial perspective is created that cannot occur in a</c>
+<c>* real image.</c>
+<c>* </c>
+<c>* The upper right window visualizes the position of the camera (yellow coordinate</c>
+<c>* system) on the virtual (blue) sphere around the 3d object model. Additionally,</c>
+<c>* the 3d object model is shown viewed from the current camera reference</c>
+<c>* The camera reference pose in general determines the mean pose under which</c>
+<c>* the 3d object model is seen in the images, in which the 3d object model should</c>
+<c>* be found. The range of poses under which the 3d object model should be found</c>
+<c>* is specified by using spherical coordinates longitude and latitude. If latitude and</c>
+<c>* longitude both are 0, the current viewing direction coincides with the viewing</c>
+<c>* direction of the reference pose.</c>
+<c>* In order to improve the interpretation of the spherical coordinates, additionally</c>
+<c>* the meridians and the circles of latitude (both with a step width of 30°) are</c>
+<c>* visualized together with the sphere.</c>
+<c>* After moving the camera on the sphere (as described above) the yellow camera</c>
+<c>* coordinate system is updated accordingly. Additionally, the reference pose</c>
+<c>* angles and the spherical coordinates of the current view are displayed in</c>
+<c>* numbers. Note that the order of the reference pose angles is 'gba'. Furthermore,</c>
+<c>*  the current camera roll angle (rotation angle around the z axis of the camera</c>
+<c>* with respect to the reference pose), the distance between the center of the</c>
+<c>* 3d object model and the camera, as well as the minimum face angle is displayed.</c>
+<c>* In addition to the values of the current camera pose (longitude, latitude, camera</c>
+<c>* roll angle, and distance) also the respective intervals of the selected pose range</c>
+<c>* are displayed. The longitude and latitude range is also displayed in form of a</c>
+<c>* magenta region on the blue sphere.</c>
+<c>* </c>
+<c>* The lower window provides several menu buttons.</c>
+<c>* </c>
+<c>* - 'Set Reference Pose' sets the reference pose to the current pose</c>
+<c>* - 'Add to Pose Range' expands the pose range to include the current pose</c>
+<c>* - 'Next Image' displays the next background image in the tuple</c>
+<c>* - 'Previous Image' displays the previous background image in the tuple</c>
+<c>* - 'Increase MinFaceAngle' increases the minimum face angle by 1 degree</c>
+<c>* - 'Decrease MinFaceAngle' decreases the minimum face angle by 1 degree</c>
+<c>* - 'Mouse Mode: Move Camera' switch to the mode which allows to move the</c>
+<c>*   camera</c>
+<c>* - 'Mouse Mode: Move Image' switch to the mode which allows to move the</c>
+<c>*    background image</c>
+<c>* - 'Reset Reference Pose' sets the reference pose angles to 0 and resets the</c>
+<c>*   pose range</c>
+<c>* - 'Reset Pose Range' deflates the pose range to the reference pose</c>
+<c>* - 'Hidden Line Removal' switches the hidden line removal on or off</c>
+<c>* - 'Exit' exits the inspect_3d_model procedure and returns the current values</c>
+<c>*    for the reference pose angles, the pose range, and the minimum face angle</c>
+<c>*    These values can directly be passed to create_shape_model_3d. Note that</c>
+<c>*    for most applications it is useful to manually extend the interval of the</c>
+<c>*    camera roll angle to the full circle [0,360°].</c>
+<c>* </c>
+<c>* </c>
+<c>* User Defines</c>
+<c>* </c>
+<c>* TrackballSize defines the diameter of the trackball in the image with respect</c>
+<c>* to the smaller image dimension.</c>
+<l>TrackballSize := 0.8</l>
+<c>* </c>
+<c>* VisualizeTrackball determines whether the Trackball shall be displayed in</c>
+<c>* displayed in the image. Possible values are:</c>
+<c>*   - 'always': always displays the trackball</c>
+<c>*   - 'never': never displays the trackball</c>
+<c>*   - 'on_button': displays the trackball while the mouse button is pressed</c>
+<l>VisualizeTrackball := 'always'</l>
+<l>* VisualizeTrackball := 'never'</l>
+<l>* VisualizeTrackball := 'on_button'</l>
+<c>* </c>
+<c>* VirtualTrackball defines the type of virtual trackball that shall</c>
+<c>* shall be used ('shoemake' or 'bell').</c>
+<l>VirtualTrackball := 'shoemake'</l>
+<l>* VirtualTrackball := 'bell'</l>
+<c>* </c>
+<c>* ModelColor defines the color of the visualized model</c>
+<l>ModelColor := 'green'</l>
+<c>* </c>
+<c>* ImageScale defines the scaling of the displayed image. This is especially useful</c>
+<c>* if the original camera image is too large to fit onto the screen. If ImageScale is</c>
+<c>* set to 1, the image is displayed using its original size. If ImageScale is set to</c>
+<c>* a value smaller than 1, the displayed image will become smaller by this factor.</c>
+<l>ImageScale := 1.0</l>
+<c>* </c>
+<c>* </c>
+<c>* </c>
+<l>dev_set_preferences ('graphics_window_context_menu', 'false')</l>
+<l>get_system ('clip_region', ClipRegion)</l>
+<l>set_system ('clip_region', 'false')</l>
+<l>dev_update_pc ('off')</l>
+<l>dev_update_window ('off')</l>
+<l>dev_update_var ('off')</l>
+<l>dev_update_time ('off')</l>
+<l>Deg2Rad := 0.017453292</l>
+<c>* </c>
+<c>* Get position of individual camera parameters depending on the</c>
+<c>* camera type</c>
+<l>get_camera_type_and_parameter_positions (CamParam, CameraType, LenCP, PosF, PosDistortion, PosTilt, PosRot, PosSx, PosSy, PosCx, PosCy, PosWidth, PosHeight, PosVx, PosVy, PosVz)</l>
+<l>if (CameraType =~ 'telecentric' or CameraType == 'line_scan')</l>
+<l>    throw ('The camera type ' + CameraType + ' is not supported for shape-based 3D matching')</l>
+<l>endif</l>
+<c>* </c>
+<c>* Apply the user defined image scaling by adapting the camera parameters</c>
+<l>CamParam[PosSx] := CamParam[PosSx] / ImageScale</l>
+<l>CamParam[PosSy] := CamParam[PosSy] / ImageScale</l>
+<l>CamParam[PosCx] := CamParam[PosCx] * ImageScale</l>
+<l>CamParam[PosCy] := CamParam[PosCy] * ImageScale</l>
+<l>CamParam[PosWidth] := int(CamParam[PosWidth] * ImageScale)</l>
+<l>CamParam[PosHeight] := int(CamParam[PosHeight] * ImageScale)</l>
+<c>* </c>
+<c>* Scale the background images accordingly</c>
+<l>zoom_image_factor (BackgroundImages, BackgroundImages, ImageScale, ImageScale, 'weighted')</l>
+<c>* </c>
+<l>Width := CamParam[PosWidth]</l>
+<l>Height := CamParam[PosHeight]</l>
+<l>Cx := CamParam[PosCx]</l>
+<l>Cy := CamParam[PosCy]</l>
+<c>* </c>
+<l>WidthPose := 300</l>
+<l>HeightPose := max([Height,480])</l>
+<c>* </c>
+<c>* Open a window containing the menu structure</c>
+<l>WidthMenu := max([Width + 7 + WidthPose,840])</l>
+<l>HeightMenu := 100</l>
+<l>dev_open_window (-50, 0, WidthMenu, HeightMenu, 'black', WindowHandleMenu)</l>
+<l>dev_set_part (0, 0, HeightMenu - 1, WidthMenu - 1)</l>
+<c>* </c>
+<c>* Open a window containing the pose information</c>
+<l>dev_open_window (102, Width + 7, WidthPose, HeightPose, 'black', WindowHandlePose)</l>
+<l>dev_set_part (0, 0, HeightPose - 1, WidthPose - 1)</l>
+<l>dev_set_line_width (1)</l>
+<c>* </c>
+<c>* Open one buffer window and one visible window to avoid flickering</c>
+<l>dev_open_window (102, 0, Width, Height, 'black', WindowHandle)</l>
+<l>dev_set_part (0, 0, Height - 1, Width - 1)</l>
+<l>dev_set_line_width (1)</l>
+<l>open_window (115, 0, Width, Height, 0, 'buffer', '', WindowHandleBuffer)</l>
+<l>set_part (WindowHandleBuffer, 0, 0, Height - 1, Width - 1)</l>
+<l>set_line_width (WindowHandleBuffer, 1)</l>
+<c>* </c>
+<c>* Compute the trackball</c>
+<l>MinImageSize := min([Width,Height])</l>
+<l>TrackballRadiusPixel := TrackballSize * MinImageSize / 2.0</l>
+<l>gen_ellipse_contour_xld (TrackballContour, Cy, Cx, 0, TrackballRadiusPixel, TrackballRadiusPixel, 0, 6.28318, 'positive', 1.5)</l>
+<c>* </c>
+<c>* Set the initial model reference pose. The orientation is parallel to the model</c>
+<c>* coordinate system, the position is at the center of gravity of the model.</c>
+<l>get_object_model_3d_params (ObjectModel3DID, 'reference_point', ReferencePoint)</l>
+<l>create_pose (-ReferencePoint[0], -ReferencePoint[1], -ReferencePoint[2], 0, 0, 0, 'Rp+T', 'gba', 'point', RefPose)</l>
+<c>* </c>
+<c>* Remember the original reference pose in order to be able to perform a reset</c>
+<l>RefPoseReset := RefPose</l>
+<c>* </c>
+<c>* Compute the optimum distance of the camera for visualization</c>
+<l>determine_optimum_viewing_distance (ObjectModel3DID, CamParam, MinImageSize, 0.8, Dist)</l>
+<l>CamPose := replace(RefPose,2,RefPose[2] + Dist)</l>
+<l>project_object_model_3d (ModelContours, ObjectModel3DID, CamParam, CamPose, 'true', rad(10))</l>
+<c>* </c>
+<l>FontSize := 12</l>
+<l>set_display_font (WindowHandle, FontSize, 'mono', 'true', 'false')</l>
+<l>set_display_font (WindowHandleBuffer, FontSize, 'mono', 'true', 'false')</l>
+<l>set_display_font (WindowHandlePose, FontSize, 'mono', 'true', 'false')</l>
+<l>set_display_font (WindowHandleMenu, FontSize, 'mono', 'true', 'false')</l>
+<c>* </c>
+<l>MenuText := ['Set Reference Pose','Add to Pose Range','Next Image','Previous Image','Increase MinFaceAngle','Decrease MinFaceAngle','Mouse Mode: Move Camera','Mouse Mode: Move Image','Reset Reference Pose','Reset Pose Range','Hidden Line Removal','Exit']</l>
+<l>gen_menu_regions (MenuRegions, WindowHandleMenu, 3, 4, 100, 'top')</l>
+<l>disp_menu (MenuRegions, WindowHandleMenu, MenuText)</l>
+<c>* </c>
+<c>* Initialize some values</c>
+<l>dev_error_var (ErrorVar, 1)</l>
+<l>RelQuaternion := [1,0,0,0]</l>
+<l>NumAdd := 0</l>
+<l>count_obj (BackgroundImages, NumImage)</l>
+<l>ImageNo := 0</l>
+<l>HiddenSurfaceRemoval := 'true'</l>
+<l>MouseMode := 'move_camera'</l>
+<l>OffsetRow := gen_tuple_const(NumImage,0)</l>
+<l>OffsetCol := gen_tuple_const(NumImage,0)</l>
+<c>* </c>
+<c>* Initialize the return values</c>
+<l>LongitudeMin := 0</l>
+<l>LongitudeMax := 0</l>
+<l>LatitudeMin := 0</l>
+<l>LatitudeMax := 0</l>
+<l>CamRollMin := 0</l>
+<l>CamRollMax := 0</l>
+<l>DistMin := Dist</l>
+<l>DistMax := Dist</l>
+<l>RefRotX := 0</l>
+<l>RefRotY := 0</l>
+<l>RefRotZ := 0</l>
+<l>MinFaceAngle := rad(30)</l>
+<c>* </c>
+<c>* Start the visualization loop</c>
+<l>hom_mat2d_identity (HomMat2DIdentity)</l>
+<l>while (1)</l>
+<l>    pose_to_hom_mat3d (RefPose, RefHomMat)</l>
+<l>    quat_to_hom_mat3d (RelQuaternion, RelHomMat)</l>
+<l>    hom_mat3d_compose (RelHomMat, RefHomMat, AbsHomMat)</l>
+<l>    hom_mat3d_to_pose (AbsHomMat, AbsPose)</l>
+<l>    AbsPose[2] := AbsPose[2] + Dist</l>
+<l>    project_object_model_3d (ModelContours, ObjectModel3DID, CamParam, AbsPose, HiddenSurfaceRemoval, MinFaceAngle)</l>
+<c>    * </c>
+<c>    * Clear the window and display the background image if desired</c>
+<l>    if (ImageNo &gt; NumImage)</l>
+<l>        ImageNo := 0</l>
+<l>    endif</l>
+<l>    if (ImageNo &lt; 0)</l>
+<l>        ImageNo := NumImage</l>
+<l>    endif</l>
+<l>    clear_window (WindowHandleBuffer)</l>
+<l>    set_color (WindowHandleBuffer, ModelColor)</l>
+<l>    if (ImageNo &gt; 0)</l>
+<l>        select_obj (BackgroundImages, BackgroundImage, ImageNo)</l>
+<l>        hom_mat2d_translate (HomMat2DIdentity, OffsetRow[ImageNo - 1], OffsetCol[ImageNo - 1], HomMat2DTranslate)</l>
+<l>        affine_trans_image (BackgroundImage, BackgroundImageTrans, HomMat2DTranslate, 'constant', 'false')</l>
+<l>        disp_image (BackgroundImageTrans, WindowHandleBuffer)</l>
+<l>        set_tposition (WindowHandleBuffer, 10, 10)</l>
+<l>        write_string (WindowHandleBuffer, 'Image No.: ' + ImageNo$'2d')</l>
+<l>    else</l>
+<l>        gen_empty_obj (BackgroundImage)</l>
+<l>        set_tposition (WindowHandleBuffer, 10, 10)</l>
+<l>        write_string (WindowHandleBuffer, '(No Background Image)')</l>
+<l>    endif</l>
+<l>    set_tposition (WindowHandleBuffer, 10, Width - 180)</l>
+<l>    if (MouseMode == 'move_camera')</l>
+<l>        write_string (WindowHandleBuffer, 'Mouse Mode: Move Camera')</l>
+<l>    else</l>
+<l>        write_string (WindowHandleBuffer, 'Mouse Mode: Move Image')</l>
+<l>    endif</l>
+<l>    disp_xld (ModelContours, WindowHandleBuffer)</l>
+<c>    * </c>
+<c>    * Visualize the trackball if desired</c>
+<l>    if (VisualizeTrackball == 'always')</l>
+<l>        set_color (WindowHandleBuffer, 'dim gray')</l>
+<l>        disp_xld (TrackballContour, WindowHandleBuffer)</l>
+<l>    endif</l>
+<l>    copy_rectangle (WindowHandleBuffer, WindowHandle, 0, 0, Height - 1, Width - 1, 0, 0)</l>
+<c>    * </c>
+<c>    * Update the parameter ranges</c>
+<l>    update_pose_information (WindowHandlePose, ObjectModel3DID, CamParam, RefPose, RelQuaternion, Dist, LatitudeMin, LatitudeMax, LongitudeMin, LongitudeMax, CamRollMin, CamRollMax, DistMin, DistMax, MinFaceAngle, HiddenSurfaceRemoval, ModelColor)</l>
+<c>    * </c>
+<c>    * Avoid multiple responses for a single mouse click</c>
+<l>    wait_seconds (0.1)</l>
+<l>    MenuEvent := false</l>
+<l>    GraphEvent := false</l>
+<l>    while (1)</l>
+<l>        dev_set_check ('~give_error')</l>
+<l>        get_mposition (WindowHandle, GraphButtonRow, GraphButtonColumn, GraphButton)</l>
+<l>        ErrorGraph := ErrorVar</l>
+<l>        get_mposition (WindowHandleMenu, MenuButtonRow, MenuButtonColumn, MenuButton)</l>
+<l>        ErrorMenu := ErrorVar</l>
+<l>        dev_update_pc ('off')</l>
+<l>        dev_set_check ('~give_error')</l>
+<l>        if (ErrorGraph == H_MSG_TRUE and GraphButton != 0)</l>
+<l>            GraphEvent := true</l>
+<l>            break</l>
+<l>        endif</l>
+<l>        if (ErrorMenu == H_MSG_TRUE and MenuButton != 0)</l>
+<l>            MenuEvent := true</l>
+<l>            break</l>
+<l>        endif</l>
+<l>    endwhile</l>
+<l>    if (GraphEvent)</l>
+<l>        if (MouseMode == 'move_camera')</l>
+<c>            * Reflect the movement of the camera</c>
+<l>            analyze_graph_event_camera (BackgroundImage, TrackballContour, GraphButton, GraphButtonRow, GraphButtonColumn, WindowHandle, WindowHandleBuffer, VirtualTrackball, TrackballSize, VisualizeTrackball, ObjectModel3DID, CamParam, HiddenSurfaceRemoval, ImageNo, ModelColor, RefPose, MinFaceAngle, OffsetRow, OffsetCol, RelQuaternion, NumAdd, Dist, RelQuaternion, NumAdd, Dist)</l>
+<l>        else</l>
+<c>            * Reflect the movement of the background image</c>
+<l>            analyze_graph_event_image (BackgroundImage, ModelContours, TrackballContour, GraphButton, GraphButtonRow, GraphButtonColumn, WindowHandle, WindowHandleBuffer, OffsetRow, OffsetCol, ImageNo, VisualizeTrackball, ModelColor, OffsetRow, OffsetCol)</l>
+<l>        endif</l>
+<l>    endif</l>
+<l>    if (MenuEvent)</l>
+<c>        * Reflect the selection of the menu button</c>
+<l>        analyze_menu_event (MenuRegions, MenuText, WindowHandleMenu, MenuButtonRow, MenuButtonColumn, LongitudeMin, LongitudeMax, LatitudeMin, LatitudeMax, CamRollMin, CamRollMax, DistMin, DistMax, MinFaceAngle, RefPose, RelQuaternion, ImageNo, HiddenSurfaceRemoval, MouseMode, Dist, ObjectModel3DID, RefPoseReset, SelectedButton, Exit, LongitudeMin, LongitudeMax, LatitudeMin, LatitudeMax, CamRollMin, CamRollMax, DistMin, DistMax, MinFaceAngle, RefPose, RelQuaternion, ImageNo, HiddenSurfaceRemoval, MouseMode)</l>
+<l>        if (Exit)</l>
+<l>            break</l>
+<l>        endif</l>
+<l>    endif</l>
+<l>endwhile</l>
+<c>* </c>
+<c>* Extract the reference pose angles from the reference pose</c>
+<l>RefRotX := RefPose[3] * Deg2Rad</l>
+<l>RefRotY := RefPose[4] * Deg2Rad</l>
+<l>RefRotZ := RefPose[5] * Deg2Rad</l>
+<c>* </c>
+<c>* Clean up</c>
+<l>set_system ('clip_region', ClipRegion)</l>
+<l>close_window (WindowHandleBuffer)</l>
+<l>dev_set_preferences ('graphics_window_context_menu', 'true')</l>
+<l>dev_set_window (WindowHandleMenu)</l>
+<l>dev_close_window ()</l>
+<l>dev_set_window (WindowHandlePose)</l>
+<l>dev_close_window ()</l>
+<l>dev_set_window (WindowHandle)</l>
+<l>dev_close_window ()</l>
+<l>return ()</l>
+</body>
+<docu id="inspect_object_model_3d">
+<chapters lang="en_US">
+<item>Matching-3D</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Matching-3D</item>
+</chapters>
+<short lang="en_US">Inspect a 3d object model and/or determine the 3d shape model parameters</short>
+<short lang="zh_CN">Inspect a 3d object model and/or determine the 3d shape model parameters</short>
+<parameters>
+<parameter id="BackgroundImages"/>
+<parameter id="CamParam"/>
+<parameter id="CamRollMax"/>
+<parameter id="CamRollMin"/>
+<parameter id="DistMax"/>
+<parameter id="DistMin"/>
+<parameter id="LatitudeMax"/>
+<parameter id="LatitudeMin"/>
+<parameter id="LongitudeMax"/>
+<parameter id="LongitudeMin"/>
+<parameter id="MinFaceAngle"/>
+<parameter id="ObjectModel3DID"/>
+<parameter id="RefRotX"/>
+<parameter id="RefRotY"/>
+<parameter id="RefRotZ"/>
+</parameters>
+</docu>
+</procedure>
+<procedure name="get_camera_type_and_parameter_positions">
+<interface>
+<ic>
+<par name="CamParam" base_type="ctrl" dimension="0"/>
+</ic>
+<oc>
+<par name="CameraType" base_type="ctrl" dimension="0"/>
+<par name="LenCP" base_type="ctrl" dimension="0"/>
+<par name="PosF" base_type="ctrl" dimension="0"/>
+<par name="PosDistortion" base_type="ctrl" dimension="0"/>
+<par name="PosTilt" base_type="ctrl" dimension="0"/>
+<par name="PosRot" base_type="ctrl" dimension="0"/>
+<par name="PosSx" base_type="ctrl" dimension="0"/>
+<par name="PosSy" base_type="ctrl" dimension="0"/>
+<par name="PosCx" base_type="ctrl" dimension="0"/>
+<par name="PosCy" base_type="ctrl" dimension="0"/>
+<par name="PosWidth" base_type="ctrl" dimension="0"/>
+<par name="PosHeight" base_type="ctrl" dimension="0"/>
+<par name="PosVx" base_type="ctrl" dimension="0"/>
+<par name="PosVy" base_type="ctrl" dimension="0"/>
+<par name="PosVz" base_type="ctrl" dimension="0"/>
+</oc>
+</interface>
+<body>
+<c>* </c>
+<c>* Initialize values</c>
+<l>CameraType := ''</l>
+<l>PosF := -1</l>
+<l>PosDistortion := -1</l>
+<l>PosTilt := -1</l>
+<l>PosRot := -1</l>
+<l>PosSx := -1</l>
+<l>PosSy := -1</l>
+<l>PosCx := -1</l>
+<l>PosCy := -1</l>
+<l>PosWidth := -1</l>
+<l>PosHeight := -1</l>
+<l>PosVx := -1</l>
+<l>PosVy := -1</l>
+<l>PosVz := -1</l>
+<c>* </c>
+<c>* Set camera type and the position of the camera parameters based</c>
+<c>* on the length of the camera parameter tuple and the value</c>
+<c>* for the focal length.</c>
+<l>LenCP := |CamParam|</l>
+<l>switch (LenCP)</l>
+<l>case 8:</l>
+<l>    if (CamParam[0] &gt; 0)</l>
+<l>        CameraType := 'area_scan_division'</l>
+<l>    else</l>
+<l>        CameraType := 'area_scan_telecentric_division'</l>
+<l>    endif</l>
+<l>    PosF := 0</l>
+<l>    PosDistortion := 1</l>
+<l>    PosSx := 2</l>
+<l>    PosSy := 3</l>
+<l>    PosCx := 4</l>
+<l>    PosCy := 5</l>
+<l>    PosWidth := 6</l>
+<l>    PosHeight := 7</l>
+<l>    break</l>
+<l>case 10:</l>
+<l>    if (CamParam[0] &gt; 0)</l>
+<l>        CameraType := 'area_scan_tilt_division'</l>
+<l>    else</l>
+<l>        CameraType := 'area_scan_telecentric_tilt_division'</l>
+<l>    endif</l>
+<l>    PosF := 0</l>
+<l>    PosDistortion := 1</l>
+<l>    PosTilt := 2</l>
+<l>    PosRot := 3</l>
+<l>    PosSx := 4</l>
+<l>    PosSy := 5</l>
+<l>    PosCx := 6</l>
+<l>    PosCy := 7</l>
+<l>    PosWidth := 8</l>
+<l>    PosHeight := 9</l>
+<l>    break</l>
+<l>case 12:</l>
+<l>    if (CamParam[0] &gt; 0)</l>
+<l>        CameraType := 'area_scan_polynomial'</l>
+<l>    else</l>
+<l>        CameraType := 'area_scan_telecentric_polynomial'</l>
+<l>    endif</l>
+<l>    PosF := 0</l>
+<l>    PosDistortion := [1:5]</l>
+<l>    PosSx := 6</l>
+<l>    PosSy := 7</l>
+<l>    PosCx := 8</l>
+<l>    PosCy := 9</l>
+<l>    PosWidth := 10</l>
+<l>    PosHeight := 11</l>
+<l>    break</l>
+<l>case 14:</l>
+<l>    if (CamParam[0] &gt; 0)</l>
+<l>        CameraType := 'area_scan_tilt_polynomial'</l>
+<l>    else</l>
+<l>        CameraType := 'area_scan_telecentric_tilt_polynomial'</l>
+<l>    endif</l>
+<l>    PosF := 0</l>
+<l>    PosDistortion := [1:5]</l>
+<l>    PosTilt := 6</l>
+<l>    PosRot := 7</l>
+<l>    PosSx := 8</l>
+<l>    PosSy := 9</l>
+<l>    PosCx := 10</l>
+<l>    PosCy := 11</l>
+<l>    PosWidth := 12</l>
+<l>    PosHeight := 13</l>
+<l>    break</l>
+<l>case 11:</l>
+<l>    CameraType := 'line_scan'</l>
+<l>    PosF := 0</l>
+<l>    PosDistortion := 1</l>
+<l>    PosSx := 2</l>
+<l>    PosSy := 3</l>
+<l>    PosCx := 4</l>
+<l>    PosCy := 5</l>
+<l>    PosWidth := 6</l>
+<l>    PosHeight := 7</l>
+<l>    PosVx := 8</l>
+<l>    PosVy := 9</l>
+<l>    PosVz := 10</l>
+<l>    break</l>
+<l>default:</l>
+<l>    throw ('Wrong length of camera parameter tuple')</l>
+<l>endswitch</l>
+<l>return ()</l>
+</body>
+<docu id="get_camera_type_and_parameter_positions">
+<chapters lang="en_US">
+<item>Calibration</item>
+<item>Camera Parameters</item>
+</chapters>
+<chapters lang="zh_CN">
+<item>Calibration</item>
+<item>Camera Parameters</item>
+</chapters>
+<short lang="en_US">Returns the camera type and the positions of the individual parameters for a given camera parameter tuple</short>
+<short lang="zh_CN">Returns the camera type and the positions of the individual parameters for a given camera parameter tuple</short>
+<parameters>
+<parameter id="CamParam"/>
+<parameter id="CameraType"/>
+<parameter id="LenCP"/>
+<parameter id="PosCx"/>
+<parameter id="PosCy"/>
+<parameter id="PosDistortion"/>
+<parameter id="PosF"/>
+<parameter id="PosHeight"/>
+<parameter id="PosRot"/>
+<parameter id="PosSx"/>
+<parameter id="PosSy"/>
+<parameter id="PosTilt"/>
+<parameter id="PosVx"/>
+<parameter id="PosVy"/>
+<parameter id="PosVz"/>
+<parameter id="PosWidth"/>
+</parameters>
+</docu>
+</procedure>
+</hdevelop>
