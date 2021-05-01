@@ -1,0 +1,9 @@
+hand_eye_calibration：
+输入参数，
+输出参数
+
+calibrate_hand_eye：
+输入参数，
+输出参数，tool_in_cam_pose基于摄像头坐标系工具的3d坐标 obj_in_base_pose基于机座的标定板坐标。
+
+使用一组标定板图像及对应pose，pose要使用mat2file.m进行转换，
